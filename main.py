@@ -100,39 +100,136 @@ HTML_TEMPLATE = """
 <html>
 <head>
     <title>Dashboard</title>
-    <meta http-equiv="refresh" content="30">
+    <meta http-equiv="refresh" content="300">
     <style>
-        body { font-family: sans-serif; display: flex; }
+        body { font-family: sans-serif; display: flex; flex-direction: column; }
+        .clock { text-align: center; font-size: 2em; padding: 20px; background: #333; color: #fff; margin-bottom: 20px; }
+        .container-row { display: flex; }
         .container { flex: 1; padding: 10px; }
+        .countdown { font-size: 1.2em; color: #666; margin-bottom: 15px; text-align: center; }
         h1, h2 { color: #333; }
         ul { list-style-type: none; padding: 0; }
         li { background: #f4f4f4; margin: 5px 0; padding: 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Next Tram Times 🚋</h1>
-        <ul>
-            {% for time in times %}
-                <li>{{ time }}</li>
-            {% endfor %}
-        </ul>
+    <div class="clock" id="clock">00:00:00</div>
+    <div class="container-row">
+        <div class="container">
+            <div class="countdown" id="nextTramCountdown">Next tram in: calculating...</div>
+            <h1>Next Tram Times</h1>
+            <ul>
+                {% for time in times %}
+                    <li>{{ time }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="container">
+            <div class="countdown" id="nextFixtureCountdown">Next match in: calculating...</div>
+            <h2>Upcoming Fixtures</h2>
+            <ul>
+                {% for fixture in fixtures %}
+                    <li>
+                        {{ fixture.home_team }} vs {{ fixture.away_team }}<br>
+                        <small>
+                            {% if fixture.competition %}{{ fixture.competition }} - {% endif %}
+                            {% set date = fixture.date.split('-') %}
+                            {{ date[2] }}/{{ date[1] }}/{{ date[0] }} at {{ fixture.time }}
+                        </small>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
     </div>
-    <div class="container">
-        <h2>Upcoming Fixtures ⚽️</h2>
-        <ul>
-            {% for fixture in fixtures %}
-                <li>
-                    {{ fixture.home_team }} vs {{ fixture.away_team }}<br>
-                    <small>
-                        {% if fixture.competition %}{{ fixture.competition }} - {% endif %}
-                        {% set date = fixture.date.split('-') %}
-                        {{ date[2] }}/{{ date[1] }}/{{ date[0] }} at {{ fixture.time }}
-                    </small>
-                </li>
-            {% endfor %}
-        </ul>
-    </div>
+    <script>
+        // Update clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toTimeString().split(' ')[0];
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Parse times and update countdowns
+        function parseTime(timeStr) {
+            const [hours, minutes] = timeStr.split(':');
+            const now = new Date();
+            const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(hours), parseInt(minutes));
+            if (target < now) {
+                target.setDate(target.getDate() + 1);
+            }
+            return target;
+        }
+
+        function getNextTramTime() {
+            const times = [{% for time in times %}'{{ time }}',{% endfor %}];
+            const now = new Date();
+            let nextTime = null;
+
+            for (const time of times) {
+                const tramTime = parseTime(time);
+                if (tramTime > now) {
+                    if (!nextTime || tramTime < nextTime) {
+                        nextTime = tramTime;
+                    }
+                }
+            }
+            return nextTime;
+        }
+
+        function getNextFixtureTime() {
+            const fixtures = [
+                {% for fixture in fixtures %}
+                {
+                    date: '{{ fixture.date }}',
+                    time: '{{ fixture.time }}'
+                },
+                {% endfor %}
+            ];
+            const now = new Date();
+            let nextTime = null;
+
+            for (const fixture of fixtures) {
+                const [year, month, day] = fixture.date.split('-');
+                const [hours, minutes] = fixture.time.split(':');
+                const fixtureTime = new Date(year, parseInt(month) - 1, day, hours, minutes);
+
+                if (fixtureTime > now) {
+                    if (!nextTime || fixtureTime < nextTime) {
+                        nextTime = fixtureTime;
+                    }
+                }
+            }
+            return nextTime;
+        }
+
+        function updateCountdowns() {
+            const now = new Date();
+
+            // Update tram countdown
+            const nextTram = getNextTramTime();
+            if (nextTram) {
+                const diffTram = Math.max(0, nextTram - now);
+                const minutesTram = Math.floor(diffTram / 60000);
+                const secondsTram = Math.floor((diffTram % 60000) / 1000);
+                document.getElementById('nextTramCountdown').textContent =
+                    `Next tram in: ${minutesTram}m ${secondsTram}s`;
+            }
+
+            // Update fixture countdown
+            const nextFixture = getNextFixtureTime();
+            if (nextFixture) {
+                const diffFixture = Math.max(0, nextFixture - now);
+                const daysFix = Math.floor(diffFixture / (1000 * 60 * 60 * 24));
+                const hoursFix = Math.floor((diffFixture % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutesFix = Math.floor((diffFixture % (1000 * 60 * 60)) / (1000 * 60));
+                document.getElementById('nextFixtureCountdown').textContent =
+                    `Next match in: ${daysFix}d ${hoursFix}h ${minutesFix}m`;
+            }
+        }
+        setInterval(updateCountdowns, 1000);
+        updateCountdowns();
+    </script>
 </body>
 </html>
 """
