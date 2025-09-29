@@ -10,9 +10,11 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Get tram stop configuration with defaults
+# Get configuration with defaults
 TRAM_STOP_REF = os.getenv("TRAM_STOP_REF", "9400ZZSYMID1")
 TRAM_STOP_NAME = os.getenv("TRAM_STOP_NAME", "Middlewood To City")
+FOOTBALL_TEAM_ID = os.getenv("FOOTBALL_TEAM_ID", "sheffield-wednesday")
+FOOTBALL_TEAM_NAME = os.getenv("FOOTBALL_TEAM_NAME", "Sheffield Wednesday")
 
 
 # Cache decorator with timeout
@@ -73,7 +75,7 @@ def get_tram_times():
 @cache_with_timeout(3600)  # Cache fixtures for 1 hour
 def get_football_fixtures():
     fixture_limit = 5
-    url = "https://fixtur.es/en/team/sheffield-wednesday/home"
+    url = f"https://fixtur.es/en/team/{FOOTBALL_TEAM_ID}/home"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req) as response:
         html_content = response.read().decode("utf-8")
@@ -119,9 +121,9 @@ def get_football_fixtures():
             game_divs = item.find_all("div")
             for div in game_divs:
                 text = div.text.strip()
-                if "-" in text and "Sheffield Wednesday" in text:
+                if "-" in text:
                     teams = text.split("-")
-                    home_team = "Sheffield Wednesday"
+                    home_team = teams[0].strip()
                     away_team = teams[1].strip()
 
                     fixtures.append(
@@ -280,7 +282,7 @@ HTML_TEMPLATE = """
         <div class="container">
             <div class="countdown" id="nextFixtureCountdown">Next match in: calculating...</div>
             <h1>⚽ Upcoming Fixtures</h1>
-            <h3>Sheffield Wednesday Home Matches</h3>
+            <h3>{{ football_team_name }} Home Matches</h3>
             <ul>
                 {% for fixture in fixtures %}
                     <li>
@@ -461,7 +463,11 @@ def index():
     times = get_tram_times()
     fixtures = get_football_fixtures()
     return render_template_string(
-        HTML_TEMPLATE, times=times, fixtures=fixtures, stop_name=TRAM_STOP_NAME
+        HTML_TEMPLATE,
+        times=times,
+        fixtures=fixtures,
+        stop_name=TRAM_STOP_NAME,
+        football_team_name=FOOTBALL_TEAM_NAME,
     )
 
 
