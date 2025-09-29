@@ -1,5 +1,5 @@
 services:
-  dashboard:
+  app:
     build:
       context: .
     # flask requires SIGINT to stop gracefully
