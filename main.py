@@ -180,12 +180,29 @@ HTML_TEMPLATE = """
         li.imminent {
             background: #fff3cd;
             border-left-color: #ffc107;
-            animation: pulse 2s infinite;
+            animation: pulse 2s ease-in-out infinite;
+            position: relative;
+            overflow: hidden;
+        }
+        li.imminent::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 193, 7, 0.2);
+            animation: shine 2s ease-in-out infinite;
         }
         @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.8; }
-            100% { opacity: 1; }
+            0% { transform: scale(1); }
+            50% { transform: scale(1.01); }
+            100% { transform: scale(1); }
+        }
+        @keyframes shine {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
         }
         small {
             color: var(--secondary);
