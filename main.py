@@ -102,14 +102,81 @@ HTML_TEMPLATE = """
     <title>Dashboard</title>
     <meta http-equiv="refresh" content="300">
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; }
-        .clock { text-align: center; font-size: 2em; padding: 20px; background: #333; color: #fff; margin-bottom: 20px; }
-        .container-row { display: flex; }
-        .container { flex: 1; padding: 10px; }
-        .countdown { font-size: 1.2em; color: #666; margin-bottom: 15px; text-align: center; }
-        h1, h2 { color: #333; }
-        ul { list-style-type: none; padding: 0; }
-        li { background: #f4f4f4; margin: 5px 0; padding: 10px; border-radius: 5px; }
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --text: #2c3e50;
+            --light: #ecf0f1;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+            background: var(--light);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .clock {
+            text-align: center;
+            font-size: 2.5em;
+            padding: 20px;
+            background: var(--primary);
+            color: white;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+        .container-row {
+            display: flex;
+            gap: 20px;
+            padding: 0 20px;
+        }
+        .container {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+        .countdown {
+            font-size: 1.2em;
+            color: var(--accent);
+            margin-bottom: 20px;
+            text-align: center;
+            padding: 10px;
+            background: var(--light);
+            border-radius: 5px;
+            font-weight: 500;
+        }
+        h1, h2 {
+            color: var(--primary);
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        li {
+            background: var(--light);
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 8px;
+            transition: transform 0.2s;
+        }
+        li:hover {
+            transform: translateX(5px);
+        }
+        small {
+            color: var(--secondary);
+            display: block;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -117,7 +184,7 @@ HTML_TEMPLATE = """
     <div class="container-row">
         <div class="container">
             <div class="countdown" id="nextTramCountdown">Next tram in: calculating...</div>
-            <h1>Next Tram Times</h1>
+            <h1>🚊 Next Tram Times</h1>
             <ul>
                 {% for time in times %}
                     <li>{{ time }}</li>
@@ -126,7 +193,7 @@ HTML_TEMPLATE = """
         </div>
         <div class="container">
             <div class="countdown" id="nextFixtureCountdown">Next match in: calculating...</div>
-            <h2>Upcoming Fixtures</h2>
+            <h1>⚽ Upcoming Fixtures</h1>
             <ul>
                 {% for fixture in fixtures %}
                     <li>
@@ -134,7 +201,8 @@ HTML_TEMPLATE = """
                         <small>
                             {% if fixture.competition %}{{ fixture.competition }} - {% endif %}
                             {% set date = fixture.date.split('-') %}
-                            {{ date[2] }}/{{ date[1] }}/{{ date[0] }} at {{ fixture.time }}
+                            {% set time = fixture.time.split(':') %}
+                            {{ date[2] }}/{{ date[1] }}/{{ date[0] }} at {{ time[0] }}:{{ time[1] }}
                         </small>
                     </li>
                 {% endfor %}
