@@ -45,9 +45,7 @@ def cache_with_timeout(timeout_seconds):
 @cache_with_timeout(30)  # Cache tram times for 30 seconds
 def get_tram_times():
     # Construct URL with environment variables
-    url = (
-        f"https://connect.wyca.vix-its.com/Text/WebDisplay.aspx?stopRef={TRAM_STOP_REF}"
-    )
+    url = f"https://bustimes.org/stops/{TRAM_STOP_REF}"
 
     req = urllib.request.Request(url)
     with urllib.request.urlopen(req) as response:
@@ -56,9 +54,9 @@ def get_tram_times():
     soup = BeautifulSoup(html_content, "html.parser")
     tram_times = []
 
-    # Find the timetable with class webDisplayTable
-    table = soup.find("table", class_="webDisplayTable")
-    if table:
+    # Find all tables - multiple if spread across days
+    tables = soup.find_all("table")
+    for table in tables:
         # Skip the header row and get all data rows
         rows = table.find_all("tr")[1:]  # Skip header row
         for row in rows:
