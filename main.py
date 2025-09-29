@@ -2,7 +2,7 @@ import os
 import urllib.request
 from flask import Flask, render_template_string
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 import time
 from dotenv import load_dotenv
@@ -65,7 +65,18 @@ def get_tram_times():
             if len(cells) >= 3:
                 time = cells[2].text.strip()
                 if time:
-                    tram_times.append(time)
+                    parsed_time = datetime.strptime(time, "%H:%M")
+                    kelham_time = parsed_time + timedelta(minutes=12)
+                    university_time = parsed_time + timedelta(minutes=16)
+                    cathedral_time = parsed_time + timedelta(minutes=20)
+                    tram_times.append(
+                        (
+                            time,
+                            kelham_time.strftime("%H:%M"),
+                            university_time.strftime("%H:%M"),
+                            cathedral_time.strftime("%H:%M"),
+                        )
+                    )
 
     return tram_times
 
@@ -273,7 +284,7 @@ HTML_TEMPLATE = """
             <h3>Departures from: {{ stop_name }}</h3>
             <ul>
                 {% for time in times %}
-                    <li>{{ time }}</li>
+                    <li>{{ time[0] }} ➡️ Kelham: {{ time[1] }} - University: {{ time[2] }} - Cathedral: {{ time[3] }}</li>
                 {% endfor %}
             </ul>
         </div>
@@ -314,7 +325,7 @@ HTML_TEMPLATE = """
         }
 
         function getNextTramTime() {
-            const times = [{% for time in times %}'{{ time }}',{% endfor %}];
+            const times = [{% for time in times %}'{{ time[0] }}',{% endfor %}];
             const now = new Date();
             let nextTime = null;
 
@@ -376,10 +387,10 @@ HTML_TEMPLATE = """
                         if (tramTime < now) {
                             item.remove();
                         } else {
-                            // Check if tram is within 10 minutes
+                            // Check if tram is within 15 minutes
                             const timeDiff = tramTime - now;
                             const minutesUntil = Math.floor(timeDiff / 60000);
-                            if (minutesUntil <= 10) {
+                            if (minutesUntil <= 15) {
                                 item.classList.add('imminent');
                             } else {
                                 item.classList.remove('imminent');
@@ -412,7 +423,8 @@ HTML_TEMPLATE = """
                         item.classList.remove('imminent');
                     }
                 });
-            }            // Update countdown for next tram
+            }
+            // Update countdown for next tram
             const nextTram = getNextTramTime();
             if (nextTram) {
                 const diffTram = Math.max(0, nextTram - now);
