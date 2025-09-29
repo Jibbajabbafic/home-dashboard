@@ -59,6 +59,7 @@ HTML_TEMPLATE = """
 <html>
 <head>
     <title>Tram Times</title>
+    <meta http-equiv="refresh" content="30">
     <style>
         body { font-family: sans-serif; }
         h1 { color: #333; }
