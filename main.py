@@ -160,6 +160,16 @@ HTML_TEMPLATE = """
             color: white;
             margin-bottom: 20px;
             box-shadow: 0 2px 4px var(--shadow);
+            /* Prevent layout shifts */
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .clock-content {
+            /* Prevent text layout shifts */
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum";
         }
         .container-row {
             display: flex;
@@ -241,7 +251,9 @@ HTML_TEMPLATE = """
     </style>
 </head>
 <body>
-    <div class="clock" id="clock">00:00:00</div>
+    <div class="clock">
+        <div class="clock-content" id="clock">00:00:00</div>
+    </div>
     <div class="container-row">
         <div class="container">
             <div class="countdown" id="nextTramCountdown">Next tram in: calculating...</div>
