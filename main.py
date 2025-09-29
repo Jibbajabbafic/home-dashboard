@@ -171,10 +171,21 @@ HTML_TEMPLATE = """
             margin: 10px 0;
             padding: 15px;
             border-radius: 8px;
-            transition: transform 0.2s;
+            transition: all 0.2s ease-in-out;
+            border-left: 4px solid transparent;
         }
         li:hover {
             transform: translateX(5px);
+        }
+        li.imminent {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
         }
         small {
             color: var(--secondary);
@@ -281,20 +292,57 @@ HTML_TEMPLATE = """
             const times = [...document.querySelectorAll('.container:first-of-type ul li')]
                 .map(li => li.textContent.trim());
 
-            // Remove passed tram times
+            // Remove passed tram times and highlight imminent ones
             times.forEach(time => {
+                if (!time) return; // Skip if time is invalid
                 const tramTime = parseTime(time);
-                if (tramTime < now) {
-                    const listItems = document.querySelectorAll('.container:first-of-type ul li');
-                    listItems.forEach(item => {
-                        if (item.textContent.trim() === time) {
+                if (!tramTime) return; // Skip if parsing failed
+
+                const listItems = document.querySelectorAll('.container:first-of-type ul li');
+                if (!listItems.length) return; // Skip if no items found
+
+                listItems.forEach(item => {
+                    if (item && item.textContent && item.textContent.trim() === time) {
+                        if (tramTime < now) {
                             item.remove();
+                        } else {
+                            // Check if tram is within 10 minutes
+                            const timeDiff = tramTime - now;
+                            const minutesUntil = Math.floor(timeDiff / 60000);
+                            if (minutesUntil <= 10) {
+                                item.classList.add('imminent');
+                            } else {
+                                item.classList.remove('imminent');
+                            }
                         }
-                    });
-                }
+                    }
+                });
             });
 
-            // Update countdown for next tram
+            // Highlight today's fixtures
+            const fixtureItems = document.querySelectorAll('.container:nth-of-type(2) ul li');
+            if (fixtureItems.length) { // Only process if we found fixture items
+                fixtureItems.forEach(item => {
+                    const smallElement = item.querySelector('small');
+                    if (!smallElement || !smallElement.textContent) return; // Skip if no small element or no text
+
+                    const dateText = smallElement.textContent;
+                    const datePart = dateText.split(' at ')[0];
+                    if (!datePart) return; // Skip if no date part
+
+                    const dateParts = datePart.split('/');
+                    if (dateParts.length !== 3) return; // Skip if date format is invalid
+
+                    const [day, month, year] = dateParts;
+                    const fixtureDate = new Date(year, month - 1, day);
+
+                    if (fixtureDate.toDateString() === now.toDateString()) {
+                        item.classList.add('imminent');
+                    } else {
+                        item.classList.remove('imminent');
+                    }
+                });
+            }            // Update countdown for next tram
             const nextTram = getNextTramTime();
             if (nextTram) {
                 const diffTram = Math.max(0, nextTram - now);
@@ -317,12 +365,13 @@ HTML_TEMPLATE = """
                     `Next match in: ${daysFix}d ${hoursFix}h ${minutesFix}m`;
             }
         }
-        setInterval(updateCountdowns, 1000);
+        // Initial update to prevent "calculating..." message
         updateCountdowns();
+        // Then set up the interval for continuous updates
+        setInterval(updateCountdowns, 1000);
     </script>
 </body>
-</html>
-"""
+</html>"""
 
 
 @app.route("/")
