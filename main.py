@@ -31,6 +31,7 @@ def get_tram_times():
 
 
 def get_football_fixtures():
+    fixture_limit = 5
     url = "https://fixtur.es/en/team/sheffield-wednesday/home"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req) as response:
@@ -47,6 +48,9 @@ def get_football_fixtures():
         for item in fixtures_div.find_all(
             "div", id=lambda x: x and x.startswith("fi_event_")
         ):
+            # Limit the number of fixtures
+            if len(fixtures) >= fixture_limit:
+                break
             # Get the competition from img title if it exists
             competition = ""
             img = item.find("img")
@@ -184,7 +188,8 @@ HTML_TEMPLATE = """
     <div class="container-row">
         <div class="container">
             <div class="countdown" id="nextTramCountdown">Next tram in: calculating...</div>
-            <h1>🚊 Next Tram Times</h1>
+            <h1>🚊 Tram Times</h1>
+            <h3>Departures from: Middlewood To City</h3>
             <ul>
                 {% for time in times %}
                     <li>{{ time }}</li>
@@ -194,16 +199,14 @@ HTML_TEMPLATE = """
         <div class="container">
             <div class="countdown" id="nextFixtureCountdown">Next match in: calculating...</div>
             <h1>⚽ Upcoming Fixtures</h1>
+            <h3>Sheffield Wednesday Home Matches</h3>
             <ul>
                 {% for fixture in fixtures %}
                     <li>
-                        {{ fixture.home_team }} vs {{ fixture.away_team }}<br>
-                        <small>
-                            {% if fixture.competition %}{{ fixture.competition }} - {% endif %}
-                            {% set date = fixture.date.split('-') %}
-                            {% set time = fixture.time.split(':') %}
-                            {{ date[2] }}/{{ date[1] }}/{{ date[0] }} at {{ time[0] }}:{{ time[1] }}
-                        </small>
+                        {% if fixture.competition %}{{ fixture.competition }} - {% endif %}
+                        {% set date = fixture.date.split('-') %}
+                        {% set time = fixture.time.split(':') %}
+                        {{ date[2] }}/{{ date[1] }}/{{ date[0] }} at {{ time[0] }}:{{ time[1] }} - vs {{ fixture.away_team }}<br>
                     </li>
                 {% endfor %}
             </ul>
@@ -274,7 +277,24 @@ HTML_TEMPLATE = """
         function updateCountdowns() {
             const now = new Date();
 
-            // Update tram countdown
+            // Update tram countdown and remove passed times
+            const times = [...document.querySelectorAll('.container:first-of-type ul li')]
+                .map(li => li.textContent.trim());
+
+            // Remove passed tram times
+            times.forEach(time => {
+                const tramTime = parseTime(time);
+                if (tramTime < now) {
+                    const listItems = document.querySelectorAll('.container:first-of-type ul li');
+                    listItems.forEach(item => {
+                        if (item.textContent.trim() === time) {
+                            item.remove();
+                        }
+                    });
+                }
+            });
+
+            // Update countdown for next tram
             const nextTram = getNextTramTime();
             if (nextTram) {
                 const diffTram = Math.max(0, nextTram - now);
@@ -282,6 +302,8 @@ HTML_TEMPLATE = """
                 const secondsTram = Math.floor((diffTram % 60000) / 1000);
                 document.getElementById('nextTramCountdown').textContent =
                     `Next tram in: ${minutesTram}m ${secondsTram}s`;
+            } else {
+                document.getElementById('nextTramCountdown').textContent = 'No upcoming trams';
             }
 
             // Update fixture countdown
