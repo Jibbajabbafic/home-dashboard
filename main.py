@@ -1,9 +1,18 @@
+import os
 import urllib.request
 from flask import Flask, render_template_string
 from bs4 import BeautifulSoup
 from datetime import datetime
 from functools import wraps
 import time
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Get tram stop configuration with defaults
+TRAM_STOP_REF = os.getenv("TRAM_STOP_REF", "9400ZZSYMID1")
+TRAM_STOP_NAME = os.getenv("TRAM_STOP_NAME", "Middlewood To City")
 
 
 # Cache decorator with timeout
@@ -33,7 +42,10 @@ def cache_with_timeout(timeout_seconds):
 
 @cache_with_timeout(30)  # Cache tram times for 30 seconds
 def get_tram_times():
-    url = "https://connect.wyca.vix-its.com/Text/WebDisplay.aspx?stopRef=9400ZZSYMID1&stopName=Middlewood+To+City"
+    # Construct URL with environment variables
+    url = (
+        f"https://connect.wyca.vix-its.com/Text/WebDisplay.aspx?stopRef={TRAM_STOP_REF}"
+    )
 
     req = urllib.request.Request(url)
     with urllib.request.urlopen(req) as response:
@@ -258,7 +270,7 @@ HTML_TEMPLATE = """
         <div class="container">
             <div class="countdown" id="nextTramCountdown">Next tram in: calculating...</div>
             <h1>🚊 Tram Times</h1>
-            <h3>Departures from: Middlewood To City</h3>
+            <h3>Departures from: {{ stop_name }}</h3>
             <ul>
                 {% for time in times %}
                     <li>{{ time }}</li>
@@ -448,7 +460,9 @@ def after_request(response):
 def index():
     times = get_tram_times()
     fixtures = get_football_fixtures()
-    return render_template_string(HTML_TEMPLATE, times=times, fixtures=fixtures)
+    return render_template_string(
+        HTML_TEMPLATE, times=times, fixtures=fixtures, stop_name=TRAM_STOP_NAME
+    )
 
 
 if __name__ == "__main__":
