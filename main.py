@@ -2,8 +2,36 @@ import urllib.request
 from flask import Flask, render_template_string
 from bs4 import BeautifulSoup
 from datetime import datetime
+from functools import wraps
+import time
 
 
+# Cache decorator with timeout
+def cache_with_timeout(timeout_seconds):
+    def decorator(func):
+        cache = {}
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            now = time.time()
+
+            # Check if we have a cached value and it's still valid
+            if func.__name__ in cache:
+                result, timestamp = cache[func.__name__]
+                if now - timestamp < timeout_seconds:
+                    return result
+
+            # If no cache or expired, call the function and cache the result
+            result = func(*args, **kwargs)
+            cache[func.__name__] = (result, now)
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+@cache_with_timeout(30)  # Cache tram times for 30 seconds
 def get_tram_times():
     url = "https://connect.wyca.vix-its.com/Text/WebDisplay.aspx?stopRef=9400ZZSYMID1&stopName=Middlewood+To+City"
 
@@ -30,6 +58,7 @@ def get_tram_times():
     return tram_times
 
 
+@cache_with_timeout(3600)  # Cache fixtures for 1 hour
 def get_football_fixtures():
     fixture_limit = 5
     url = "https://fixtur.es/en/team/sheffield-wednesday/home"
@@ -399,4 +428,16 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=3000)
+    # Support both standalone and Home Assistant proxy modes
+    port = 3000
+    # Remove iframe restrictions for Home Assistant integration
+    app.config["SECRET_KEY"] = "dev"
+    app.config["PREFERRED_URL_SCHEME"] = "http"
+
+    # Allow iframe embedding
+    @app.after_request
+    def after_request(response):
+        response.headers["X-Frame-Options"] = "ALLOWALL"
+        return response
+
+    app.run(host="0.0.0.0", port=port)
