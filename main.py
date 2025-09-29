@@ -420,6 +420,18 @@ HTML_TEMPLATE = """
 </html>"""
 
 
+# Configure Flask app for production
+app.config["SECRET_KEY"] = "dev"
+app.config["PREFERRED_URL_SCHEME"] = "http"
+
+
+# Allow iframe embedding for Home Assistant
+@app.after_request
+def after_request(response):
+    response.headers["X-Frame-Options"] = "ALLOWALL"
+    return response
+
+
 @app.route("/")
 def index():
     times = get_tram_times()
@@ -428,16 +440,5 @@ def index():
 
 
 if __name__ == "__main__":
-    # Support both standalone and Home Assistant proxy modes
-    port = 3000
-    # Remove iframe restrictions for Home Assistant integration
-    app.config["SECRET_KEY"] = "dev"
-    app.config["PREFERRED_URL_SCHEME"] = "http"
-
-    # Allow iframe embedding
-    @app.after_request
-    def after_request(response):
-        response.headers["X-Frame-Options"] = "ALLOWALL"
-        return response
-
-    app.run(host="0.0.0.0", port=port)
+    # This is only used for development
+    app.run(host="0.0.0.0", port=3000)

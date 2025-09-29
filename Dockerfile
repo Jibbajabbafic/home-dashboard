@@ -37,5 +37,12 @@ ENTRYPOINT []
 # Use the non-root user to run our application
 USER nonroot
 
-# Run the Flask app with Gunicorn for production
-CMD ["python", "main.py"]
+# Run with Gunicorn for production
+CMD ["python", "-m", "gunicorn", \
+    "--bind", "0.0.0.0:3000", \
+    "--workers", "2", \
+    "--threads", "4", \
+    "--worker-class", "gthread", \
+    "--worker-tmp-dir", "/dev/shm", \
+    "--access-logfile", "-", \
+    "main:app"]
