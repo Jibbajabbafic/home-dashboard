@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Dashboard</title>
     <meta http-equiv="refresh" content="300">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
+
 <body>
     <div class="clock">
         <div class="clock-content" id="clock">00:00:00</div>
@@ -17,7 +19,8 @@
             <h3>Departures from: {{ stop_name }}</h3>
             <ul>
                 {% for time in times %}
-                    <li>{{ time[0] }} ➡️ Kelham: {{ time[1] }} - University: {{ time[2] }} - Cathedral: {{ time[3] }}</li>
+                <li><span class="item-date">{{ time[0] }}</span> ➡️ Kelham: {{ time[1] }} - University: {{ time[2] }} -
+                    Cathedral: {{ time[3] }}</li>
                 {% endfor %}
             </ul>
         </div>
@@ -27,16 +30,38 @@
             <h3>{{ football_team_name }} Home Matches</h3>
             <ul>
                 {% for fixture in fixtures %}
-                    <li>
-                        {% if fixture.competition %}{{ fixture.competition }} - {% endif %}
-                        {% set date = fixture.date.split('-') %}
-                        {% set time = fixture.time.split(':') %}
-                        {{ date[2] }}/{{ date[1] }}/{{ date[0] }} at {{ time[0] }}:{{ time[1] }} - vs {{ fixture.away_team }}<br>
-                    </li>
+                <li>
+                    {% if fixture.competition %}{{ fixture.competition }} - {% endif %}
+                    {% set date = fixture.date.split('-') %}
+                    {% set time = fixture.time.split(':') %}
+                    <span class="item-date">{{ date[2] }}/{{ date[1] }}/{{ date[0] }} at {{ time[0] }}:{{ time[1]
+                        }}</span> - vs {{ fixture.away_team }}<br>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="container">
+            <div class="countdown" id="nextBinCountdown">Next bin in: calculating...</div>
+            <h1>🗑️ Bin Collections</h1>
+            <!-- Legend removed; badges now show full text per item -->
+            <ul id="binList">
+                {% for bin in bin_collections %}
+                {% set d = bin.date.split('-') %}
+                {% set formatted = d[2] + '/' + d[1] + '/' + d[0] %}
+                <li class="bin-item bin-{{ bin.type }}">
+                    <div class="bin-row">
+                        <div class="item-date">{{ formatted }}</div>
+                        <div class="bin-badge bin-{{ bin.type }}-badge">
+                            {% if bin.type == 'general' %}General{% elif bin.type == 'paper' %}Paper & Card{% elif
+                            bin.type == 'glass' %}Glass & Cans{% else %}{{ bin.type | capitalize }}{% endif %}
+                        </div>
+                    </div>
+                </li>
                 {% endfor %}
             </ul>
         </div>
     </div>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
+
 </html>

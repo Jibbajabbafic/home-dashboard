@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import urllib.request
 from datetime import datetime, timedelta
@@ -17,6 +18,11 @@ TRAM_STOP_REF = os.getenv("TRAM_STOP_REF", "9400ZZSYMID1")
 TRAM_STOP_NAME = os.getenv("TRAM_STOP_NAME", "Middlewood To City")
 FOOTBALL_TEAM_ID = os.getenv("FOOTBALL_TEAM_ID", "sheffield-wednesday")
 FOOTBALL_TEAM_NAME = os.getenv("FOOTBALL_TEAM_NAME", "Sheffield Wednesday")
+BIN_PROPERTY_ID = os.getenv("BIN_PROPERTY_ID")
+if not BIN_PROPERTY_ID:
+    raise RuntimeError(
+        "Environment variable BIN_PROPERTY_ID is required. Set it to the property ID from wasteservices.sheffield.gov.uk"
+    )
 
 
 # Cache decorator with timeout
@@ -163,6 +169,87 @@ def get_football_fixtures() -> list[dict[str, str]]:
     return fixtures
 
 
+# Bin collections are relatively static; cache for 12 hours
+@cache_with_timeout(60 * 60 * 12)
+def get_bin_collections() -> list[dict[str, str]]:
+    """Scrape the Sheffield waste services property page for upcoming bin collections.
+
+    Returns a list of dicts with keys: date (YYYY-MM-DD) and type (one of 'general', 'paper', 'glass').
+    """
+    url = f"https://wasteservices.sheffield.gov.uk/property/{BIN_PROPERTY_ID}"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=20) as response:
+            html_content = response.read().decode("utf-8")
+    except Exception as e:
+        # In case of network or site error, return empty list
+        print(f"Error fetching bin collections: {e}")
+        return []
+
+    soup = BeautifulSoup(html_content, "html.parser")
+    collections: list[dict[str, str]] = []
+
+    # Targeted parsing for the Sheffield page table structure
+    # Rows for services have classes like 'service-id-1' and contain a h4 with the bin name
+    # and a td with class 'next-service' listing upcoming dates (comma separated)
+    seen = set()
+    table = soup.find("table", class_=lambda x: True if x else False)
+    if table:
+        # find rows with service-id-* in class
+        for row in table.find_all("tr"):
+            cls = row.get("class") or []
+            cls_text = " ".join(cls)
+            if "service-id-" in cls_text:
+                # Find the bin name
+                name_elem = row.find("h4")
+                bin_name = name_elem.text.strip() if name_elem else ""
+                # Map name to type
+                low = bin_name.lower()
+                if "black" in low or "residual" in low:
+                    bin_type = "general"
+                elif "blue" in low or "paper" in low or "card" in low:
+                    bin_type = "paper"
+                elif "brown" in low or "glass" in low or "cans" in low:
+                    bin_type = "glass"
+                else:
+                    # unknown service, skip
+                    bin_type = None
+
+                # Find next-service td
+                next_td = row.find("td", class_="next-service")
+                if next_td and bin_type:
+                    # normalize whitespace and remove header labels like 'Next Collections'
+                    text = next_td.get_text(separator=" ").strip()
+                    # Find all date-like substrings such as '2 Oct 2025' or '02 October 2025'
+                    date_matches = re.findall(r"\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}", text)
+                    for dm in date_matches:
+                        parsed_dt = None
+                        for fmt in ("%d %b %Y", "%d %B %Y"):
+                            try:
+                                parsed_dt = datetime.strptime(dm, fmt)
+                                break
+                            except Exception:
+                                continue
+                        if not parsed_dt:
+                            continue
+                        date_iso = parsed_dt.strftime("%Y-%m-%d")
+                        key = f"{date_iso}:{bin_type}"
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        collections.append({"date": date_iso, "type": bin_type})
+
+    # Only use the targeted parsing above which extracts rows with 'service-id-*'.
+
+    # Sort collections by date
+    try:
+        collections.sort(key=lambda x: x["date"])
+    except Exception:
+        pass
+
+    return collections
+
+
 app = Flask(__name__)
 
 # The HTML, CSS and JS are moved to `templates/index.html` and `static/`.
@@ -184,10 +271,12 @@ def after_request(response: Response) -> Response:
 def index():
     times = get_tram_times()
     fixtures = get_football_fixtures()
+    bin_collections = get_bin_collections()
     return render_template(
         "index.html",
         times=times,
         fixtures=fixtures,
+        bin_collections=bin_collections,
         stop_name=TRAM_STOP_NAME,
         football_team_name=FOOTBALL_TEAM_NAME,
     )
