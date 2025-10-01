@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <meta http-equiv="refresh" content="300">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+    <div class="clock">
+        <div class="clock-content" id="clock">00:00:00</div>
+    </div>
+    <div class="container-row">
+        <div class="container">
+            <div class="countdown" id="nextTramCountdown">Next tram in: calculating...</div>
+            <h1>🚊 Tram Times</h1>
+            <h3>Departures from: {{ stop_name }}</h3>
+            <ul>
+                {% for time in times %}
+                    <li>{{ time[0] }} ➡️ Kelham: {{ time[1] }} - University: {{ time[2] }} - Cathedral: {{ time[3] }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="container">
+            <div class="countdown" id="nextFixtureCountdown">Next match in: calculating...</div>
+            <h1>⚽ Upcoming Fixtures</h1>
+            <h3>{{ football_team_name }} Home Matches</h3>
+            <ul>
+                {% for fixture in fixtures %}
+                    <li>
+                        {% if fixture.competition %}{{ fixture.competition }} - {% endif %}
+                        {% set date = fixture.date.split('-') %}
+                        {% set time = fixture.time.split(':') %}
+                        {{ date[2] }}/{{ date[1] }}/{{ date[0] }} at {{ time[0] }}:{{ time[1] }} - vs {{ fixture.away_team }}<br>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

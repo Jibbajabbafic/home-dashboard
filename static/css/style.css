@@ -1,0 +1,113 @@
+:root {
+    --primary: #2c3e50;
+    --secondary: #34495e;
+    --accent: #3498db;
+    --text: #2c3e50;
+    --light: #ecf0f1;
+    --shadow: rgba(0, 0, 0, 0.1);
+}
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    background: var(--light);
+    color: var(--text);
+    min-height: 100vh;
+}
+.clock {
+    text-align: center;
+    font-size: 2.5em;
+    padding: 20px;
+    background: var(--primary);
+    color: white;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px var(--shadow);
+    /* Prevent layout shifts */
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.clock-content {
+    /* Prevent text layout shifts */
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+}
+.container-row {
+    display: flex;
+    gap: 20px;
+    padding: 0 20px;
+}
+.container {
+    flex: 1;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px var(--shadow);
+}
+.countdown {
+    font-size: 1.2em;
+    color: var(--accent);
+    margin-bottom: 20px;
+    text-align: center;
+    padding: 10px;
+    background: var(--light);
+    border-radius: 5px;
+    font-weight: 500;
+}
+h1, h2 {
+    color: var(--primary);
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+li {
+    background: var(--light);
+    margin: 10px 0;
+    padding: 15px;
+    border-radius: 8px;
+    transition: all 0.2s ease-in-out;
+    border-left: 4px solid transparent;
+}
+li:hover {
+    transform: translateX(5px);
+}
+li.imminent {
+    background: #fff3cd;
+    border-left-color: #ffc107;
+    animation: pulse 2s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+}
+li.imminent::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 193, 7, 0.2);
+    animation: shine 2s ease-in-out infinite;
+}
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.01); }
+    100% { transform: scale(1); }
+}
+@keyframes shine {
+    0% { opacity: 0; }
+    50% { opacity: 1; }
+    100% { opacity: 0; }
+}
+small {
+    color: var(--secondary);
+    display: block;
+    margin-top: 5px;
+}
