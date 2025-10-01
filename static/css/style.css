@@ -152,13 +152,7 @@ small {
     gap: 10px;
 }
 
-.bin-date {
-    font-weight: 600;
-    color: var(--primary);
-}
-
-.item-date,
-.bin-date {
+.item-date {
     font-weight: 600;
     color: var(--primary);
     font-variant-numeric: tabular-nums;
@@ -174,30 +168,6 @@ small {
 
 .bin-glass-badge {
     background: #8b4513;
-}
-
-/* Bin colours */
-.bin-general {
-    border-left-color: #222;
-    /* black */
-    background: #f7f7f8;
-}
-
-.bin-paper {
-    border-left-color: #1e90ff;
-    /* blue */
-    background: #f0f8ff;
-}
-
-.bin-glass {
-    border-left-color: #8b4513;
-    /* brown */
-    background: #fffaf0;
-}
-
-.bin-item.next {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
-    transform: translateX(4px) scale(1.01);
 }
 
 .bin-badge {

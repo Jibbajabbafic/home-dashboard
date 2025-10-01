@@ -128,29 +128,35 @@ function updateCountdowns() {
     // Update bin collections
     const binItems = Array.from(document.querySelectorAll('#binList .bin-item'))
         .map(li => {
-            const text = li.textContent || '';
-            // Expecting DD/MM/YYYY - type (from template), but also accept ISO as fallback
-            const parts = text.split('-').map(s => s.trim());
-            if (parts.length >= 2) {
-                const datePart = parts[0];
-                const typePart = parts[1];
-                // Try DD/MM/YYYY
-                const dm = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-                if (dm) {
-                    const d = Number(dm[1]);
-                    const m = Number(dm[2]);
-                    const y = Number(dm[3]);
-                    return { el: li, date: new Date(y, m - 1, d), type: typePart };
-                }
-                // Try ISO YYYY-MM-DD
-                const iso = datePart.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-                if (iso) {
-                    const y = Number(iso[1]);
-                    const m = Number(iso[2]);
-                    const d = Number(iso[3]);
-                    return { el: li, date: new Date(y, m - 1, d), type: typePart };
-                }
+            // Read date and type from specific elements (template renders them separately)
+            const dateEl = li.querySelector('.item-date');
+            const badgeEl = li.querySelector('.bin-badge');
+            if (!dateEl) return null;
+            const dateText = (dateEl.textContent || '').trim();
+            const typeText = (badgeEl && badgeEl.textContent) ? badgeEl.textContent.trim() : '';
+
+            // Try to find DD/MM/YYYY anywhere in the text
+            const dm = dateText.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+            if (dm) {
+                const d = Number(dm[1]);
+                const m = Number(dm[2]);
+                const y = Number(dm[3]);
+                // Use end-of-day so collections for 'today' count as upcoming for the whole day
+                const date = new Date(y, m - 1, d, 23, 59, 59, 999);
+                return { el: li, date: date, type: typeText };
             }
+
+            // Try ISO YYYY-MM-DD anywhere in the text
+            const iso = dateText.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (iso) {
+                const y = Number(iso[1]);
+                const m = Number(iso[2]);
+                const d = Number(iso[3]);
+                const date = new Date(y, m - 1, d, 23, 59, 59, 999);
+                return { el: li, date: date, type: typeText };
+            }
+
+            // Could not parse
             return null;
         })
         .filter(Boolean);
@@ -162,27 +168,27 @@ function updateCountdowns() {
         }
     }
 
-    // Highlight bin items that are imminent (within 24 hours)
-    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-    binItems.forEach(item => {
-        const diffMs = item.date - now;
-        if (diffMs >= 0 && diffMs <= ONE_DAY_MS) {
-            item.el.classList.add('imminent');
-        } else {
-            item.el.classList.remove('imminent');
-        }
-    });
-
     if (nextBin) {
-        const diff = Math.max(0, nextBin.date - now);
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        document.getElementById('nextBinCountdown').textContent =
-            `Next bin in: ${days}d ${hours}h ${minutes}m`;
-        // Highlight next bin
+        // Show simplified countdown: Today / Tomorrow / X days
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const startOfNext = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+
+        let label = '';
+        if (nextBin.date >= startOfToday && nextBin.date < startOfTomorrow) {
+            label = 'Today';
+        } else if (nextBin.date >= startOfTomorrow && nextBin.date < startOfNext) {
+            label = 'Tomorrow';
+        } else {
+            const diffDays = Math.ceil((nextBin.date - startOfToday) / (1000 * 60 * 60 * 24));
+            label = `${diffDays} days`;
+        }
+
+        document.getElementById('nextBinCountdown').textContent = `Next bin: ${label}`;
+
+        // Highlight bin items that are imminent (within 24 hours)
         document.querySelectorAll('#binList .bin-item').forEach(el => el.classList.remove('next'));
-        nextBin.el.classList.add('next');
+        nextBin.el.classList.add('imminent');
     } else {
         document.getElementById('nextBinCountdown').textContent = 'No upcoming bin collections';
     }
