@@ -1,11 +1,13 @@
 import os
+import time
 import urllib.request
-from flask import Flask, render_template
-from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from functools import wraps
-import time
+from typing import Any, Callable, Dict, Tuple
+
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
+from flask import Flask, Response, render_template
 
 # Load environment variables
 load_dotenv()
@@ -18,12 +20,23 @@ FOOTBALL_TEAM_NAME = os.getenv("FOOTBALL_TEAM_NAME", "Sheffield Wednesday")
 
 
 # Cache decorator with timeout
-def cache_with_timeout(timeout_seconds):
-    def decorator(func):
-        cache = {}
+def cache_with_timeout(
+    timeout_seconds: int,
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """A simple caching decorator with a timeout in seconds.
+
+    Args:
+        timeout_seconds: Number of seconds to keep a cached value.
+
+    Returns:
+        A decorator that caches function results.
+    """
+
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        cache: Dict[str, Tuple[Any, float]] = {}
 
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             now = time.time()
 
             # Check if we have a cached value and it's still valid
@@ -43,7 +56,7 @@ def cache_with_timeout(timeout_seconds):
 
 
 @cache_with_timeout(30)  # Cache tram times for 30 seconds
-def get_tram_times():
+def get_tram_times() -> list[tuple[str, str, str, str]]:
     # Construct URL with environment variables
     url = f"https://bustimes.org/stops/{TRAM_STOP_REF}"
 
@@ -52,7 +65,7 @@ def get_tram_times():
         html_content = response.read().decode("utf-8")
 
     soup = BeautifulSoup(html_content, "html.parser")
-    tram_times = []
+    tram_times: list[tuple[str, str, str, str]] = []
 
     # Find all tables - multiple if spread across days
     tables = soup.find_all("table")
@@ -63,15 +76,15 @@ def get_tram_times():
             # The time is in the third cell
             cells = row.find_all("td")
             if len(cells) >= 3:
-                time = cells[2].text.strip()
-                if time:
-                    parsed_time = datetime.strptime(time, "%H:%M")
+                time_str = cells[2].text.strip()
+                if time_str:
+                    parsed_time = datetime.strptime(time_str, "%H:%M")
                     kelham_time = parsed_time + timedelta(minutes=12)
                     university_time = parsed_time + timedelta(minutes=16)
                     cathedral_time = parsed_time + timedelta(minutes=20)
                     tram_times.append(
                         (
-                            time,
+                            time_str,
                             kelham_time.strftime("%H:%M"),
                             university_time.strftime("%H:%M"),
                             cathedral_time.strftime("%H:%M"),
@@ -82,7 +95,7 @@ def get_tram_times():
 
 
 @cache_with_timeout(3600)  # Cache fixtures for 1 hour
-def get_football_fixtures():
+def get_football_fixtures() -> list[dict[str, str]]:
     fixture_limit = 5
     url = f"https://fixtur.es/en/team/{FOOTBALL_TEAM_ID}/home"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -90,7 +103,7 @@ def get_football_fixtures():
         html_content = response.read().decode("utf-8")
 
     soup = BeautifulSoup(html_content, "html.parser")
-    fixtures = []
+    fixtures: list[dict[str, str]] = []
     today = datetime.now().date()
 
     # Find the fixtures container
@@ -98,7 +111,7 @@ def get_football_fixtures():
     if fixtures_div:
         # Find all fixture divs (they start with fi_event_)
         for item in fixtures_div.find_all(
-            "div", id=lambda x: x and x.startswith("fi_event_")
+            "div", id=lambda x: bool(x and x.startswith("fi_event_"))
         ):
             # Limit the number of fixtures
             if len(fixtures) >= fixture_limit:
@@ -107,22 +120,23 @@ def get_football_fixtures():
             competition = ""
             img = item.find("img")
             if img and img.get("title"):
-                competition = img.get("title")
+                competition = str(img.get("title"))
 
             # Find the date and time
             time_elem = item.find("time")
             date = ""
-            time = ""
+            time_str = ""
             if time_elem:
-                date_time = time_elem.get("datetime", "").split("T")
+                dt_attr = time_elem.get("datetime", "")
+                date_time = str(dt_attr).split("T")
                 if date_time:
                     date = date_time[0]
                     if len(date_time) > 1:
-                        time = date_time[1].split("+")[0]
+                        time_str = date_time[1].split("+")[0]
 
             # Skip this fixture if it's in the past
             if date:
-                fixture_date = datetime.strptime(date, "%Y-%m-%d").date()
+                fixture_date = datetime.strptime(str(date), "%Y-%m-%d").date()
                 if fixture_date < today:
                     continue
 
@@ -137,11 +151,11 @@ def get_football_fixtures():
 
                     fixtures.append(
                         {
-                            "competition": competition,
-                            "date": date,
-                            "time": time,
-                            "home_team": home_team,
-                            "away_team": away_team,
+                            "competition": str(competition),
+                            "date": str(date),
+                            "time": str(time_str),
+                            "home_team": str(home_team),
+                            "away_team": str(away_team),
                         }
                     )
                     break
@@ -161,7 +175,7 @@ app.config["PREFERRED_URL_SCHEME"] = "http"
 
 # Allow iframe embedding for Home Assistant
 @app.after_request
-def after_request(response):
+def after_request(response: Response) -> Response:
     response.headers["X-Frame-Options"] = "ALLOWALL"
     return response
 
