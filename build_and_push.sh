@@ -1,7 +1,20 @@
 #!/bin/bash
 set -euo pipefail
 
-docker login
+DRY_RUN=false
+
+# Simple CLI parsing for --dry-run / -n
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run|-n)
+      DRY_RUN=true
+      ;;
+    --help|-h)
+      echo "Usage: $0 [--dry-run|-n]"
+      exit 0
+      ;;
+  esac
+done
 
 if docker buildx inspect | grep -q "Endpoint:.*unix:///var/run/docker.sock" ; then
     echo "Builder exists already"
@@ -42,7 +55,18 @@ else
   TAG_RELEASE=""
 fi
 
-echo "Building and pushing ${TAG_SHA} and ${TAG_LATEST}..."
+# Prepare a human-readable list of tags that will be pushed
+if [ -n "${TAG_RELEASE}" ]; then
+  DISPLAY_TAGS="${TAG_SHA}, ${TAG_RELEASE}, ${TAG_LATEST}"
+else
+  DISPLAY_TAGS="${TAG_SHA}, ${TAG_LATEST}"
+fi
+
+if [ "${DRY_RUN}" = true ]; then
+  echo "Dry run: building ${DISPLAY_TAGS} (push skipped)"
+else
+  echo "Building and pushing ${DISPLAY_TAGS}..."
+fi
 
 # Build an array of -t tags to pass to docker. This avoids complex inline quoting
 # and prevents mismatched quotes when TAG_RELEASE is empty.
@@ -52,8 +76,21 @@ if [ -n "${TAG_RELEASE}" ]; then
 fi
 DOCKER_TAGS+=("-t" "${TAG_LATEST}")
 
-docker buildx build \
-  --platform linux/amd64,linux/arm64 \
-  "${DOCKER_TAGS[@]}" \
-  --label "org.opencontainers.image.revision=${GIT_SHA}" \
-  --push .
+# Ensure we're logged in (will use cached login if already done)
+docker login
+
+# Run the build; push only when not a dry run
+if [ "${DRY_RUN}" = true ]; then
+  docker buildx build \
+    --platform linux/amd64,linux/arm64 \
+    "${DOCKER_TAGS[@]}" \
+    --label "org.opencontainers.image.revision=${GIT_SHA}" \
+    .
+  echo "Dry run complete. Image(s) were built locally but not pushed."
+else
+  docker buildx build \
+    --platform linux/amd64,linux/arm64 \
+    "${DOCKER_TAGS[@]}" \
+    --label "org.opencontainers.image.revision=${GIT_SHA}" \
+    --push .
+fi
