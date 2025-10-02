@@ -28,11 +28,26 @@ IMAGE="jibby/home-dashboard"
 TAG_SHA="${IMAGE}:${GIT_SHA}"
 TAG_LATEST="${IMAGE}:latest"
 
+# If HEAD is exactly at a tag, prefer that tag as a release tag
+GIT_TAG=""
+if git rev-parse --git-dir >/dev/null 2>&1; then
+  if git describe --tags --exact-match >/dev/null 2>&1; then
+    GIT_TAG=$(git describe --tags --exact-match)
+  fi
+fi
+
+if [ -n "$GIT_TAG" ]; then
+  TAG_RELEASE="${IMAGE}:${GIT_TAG}"
+else
+  TAG_RELEASE=""
+fi
+
 echo "Building and pushing ${TAG_SHA} and ${TAG_LATEST}..."
 
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
   -t "${TAG_SHA}" \
+  $( [ -n "$TAG_RELEASE" ] && printf '%s\n' "-t \"${TAG_RELEASE}\" \")
   -t "${TAG_LATEST}" \
   --label "org.opencontainers.image.revision=${GIT_SHA}" \
   --push .
