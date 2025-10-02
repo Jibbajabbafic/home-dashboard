@@ -6,8 +6,9 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
-// Parse times and update countdowns
-function parseTime(timeStr) {
+// Parse a time string "HH:MM" into a Date for today. If rollIfPast is true,
+// roll the date to tomorrow when the parsed time is earlier than now.
+function parseTime(timeStr, rollIfPast = true) {
     if (!timeStr) return null;
     const parts = timeStr.trim().split(':');
     if (parts.length < 2) return null;
@@ -15,52 +16,66 @@ function parseTime(timeStr) {
     const minutes = parseInt(parts[1], 10);
     if (isNaN(hours) || isNaN(minutes)) return null;
     const now = new Date();
-    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
-    if (target < now) {
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+    if (rollIfPast && target < now) {
         target.setDate(target.getDate() + 1);
     }
     return target;
 }
 
+// Parse a fixture li's text for a Date in the format dd/mm/yyyy at hh:mm
+function parseFixtureFromText(text) {
+    const match = (text || '').match(/(\d{1,2}\/\d{1,2}\/\d{4}) at (\d{1,2}:\d{2})/);
+    if (!match) return null;
+    const [, datePart, timePart] = match;
+    const [day, month, year] = datePart.split('/').map(Number);
+    const [hours, minutes] = timePart.split(':').map(Number);
+    if ([day, month, year, hours, minutes].some(n => Number.isNaN(n))) return null;
+    return new Date(year, month - 1, day, hours, minutes);
+}
+
+// Parse a bin date string from display formats: DD/MM/YYYY or YYYY-MM-DD
+function parseBinDateFromText(dateText) {
+    if (!dateText) return null;
+    const dm = dateText.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dm) {
+        const d = Number(dm[1]);
+        const m = Number(dm[2]);
+        const y = Number(dm[3]);
+        return new Date(y, m - 1, d, 23, 59, 59, 999);
+    }
+    const iso = dateText.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (iso) {
+        const y = Number(iso[1]);
+        const m = Number(iso[2]);
+        const d = Number(iso[3]);
+        return new Date(y, m - 1, d, 23, 59, 59, 999);
+    }
+    return null;
+}
+
 function getNextTramTime() {
-    const times = [...document.querySelectorAll('.container:first-of-type ul li')]
+    const times = Array.from(document.querySelectorAll('.container:first-of-type ul li'))
         .map(li => li.textContent.trim().split(' ')[0])
         .filter(Boolean);
     const now = new Date();
     let nextTime = null;
-
     for (const time of times) {
-        const tramTime = parseTime(time);
+        const tramTime = parseTime(time, true); // roll to next day if needed
         if (!tramTime) continue;
-        if (tramTime > now) {
-            if (!nextTime || tramTime < nextTime) {
-                nextTime = tramTime;
-            }
-        }
+        if (tramTime > now && (!nextTime || tramTime < nextTime)) nextTime = tramTime;
     }
     return nextTime;
 }
 
 function getNextFixtureTime() {
     const fixtures = Array.from(document.querySelectorAll('.container:nth-of-type(2) ul li'))
-        .map(li => {
-            // Try to parse date from the displayed text: dd/mm/yyyy at hh:mm
-            const text = li.textContent || '';
-            const match = text.match(/(\d{1,2}\/\d{1,2}\/\d{4}) at (\d{1,2}:\d{2})/);
-            if (!match) return null;
-            const [_, datePart, timePart] = match;
-            const [day, month, year] = datePart.split('/').map(Number);
-            const [hours, minutes] = timePart.split(':').map(Number);
-            return new Date(year, month - 1, day, hours, minutes);
-        })
+        .map(li => parseFixtureFromText(li.textContent || ''))
         .filter(Boolean);
-
     const now = new Date();
     let nextTime = null;
     for (const fixtureTime of fixtures) {
-        if (fixtureTime > now) {
-            if (!nextTime || fixtureTime < nextTime) nextTime = fixtureTime;
-        }
+        if (fixtureTime > now && (!nextTime || fixtureTime < nextTime)) nextTime = fixtureTime;
     }
     return nextTime;
 }
@@ -69,37 +84,29 @@ function updateCountdowns() {
     const now = new Date();
 
     // Update tram countdown and remove passed times
-    const listItems = document.querySelectorAll('.container:first-of-type ul li');
-    listItems.forEach(item => {
+    // Cache selectors
+    const tramItems = document.querySelectorAll('.container:first-of-type ul li');
+    tramItems.forEach(item => {
         const text = item.textContent.trim();
         const time = text.split(' ')[0];
-        const tramTime = parseTime(time);
-        if (!tramTime) return;
-        if (tramTime < now) {
+        const tramTimeToday = parseTime(time, false); // don't roll -- used to decide removal
+        if (!tramTimeToday) return;
+        if (tramTimeToday <= now) {
             item.remove();
-        } else {
-            const minutesUntil = Math.floor((tramTime - now) / 60000);
-            if (minutesUntil <= 15) {
-                item.classList.add('imminent');
-            } else {
-                item.classList.remove('imminent');
-            }
+            return;
         }
+        const minutesUntil = Math.floor((tramTimeToday - now) / 60000);
+        if (minutesUntil <= 15) item.classList.add('imminent');
+        else item.classList.remove('imminent');
     });
 
     // Highlight today's fixtures
     const fixtureItems = document.querySelectorAll('.container:nth-of-type(2) ul li');
     fixtureItems.forEach(item => {
-        const text = item.textContent || '';
-        const match = text.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
-        if (!match) return;
-        const [day, month, year] = match[0].split('/').map(Number);
-        const fixtureDate = new Date(year, month - 1, day);
-        if (fixtureDate.toDateString() === now.toDateString()) {
-            item.classList.add('imminent');
-        } else {
-            item.classList.remove('imminent');
-        }
+        const fixtureDate = parseFixtureFromText(item.textContent || '');
+        if (!fixtureDate) return;
+        if (fixtureDate.toDateString() === now.toDateString()) item.classList.add('imminent');
+        else item.classList.remove('imminent');
     });
 
     // Update countdown for next tram
@@ -126,40 +133,17 @@ function updateCountdowns() {
     }
 
     // Update bin collections
-    const binItems = Array.from(document.querySelectorAll('#binList .bin-item'))
-        .map(li => {
-            // Read date and type from specific elements (template renders them separately)
-            const dateEl = li.querySelector('.item-date');
-            const badgeEl = li.querySelector('.bin-badge');
-            if (!dateEl) return null;
-            const dateText = (dateEl.textContent || '').trim();
-            const typeText = (badgeEl && badgeEl.textContent) ? badgeEl.textContent.trim() : '';
-
-            // Try to find DD/MM/YYYY anywhere in the text
-            const dm = dateText.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-            if (dm) {
-                const d = Number(dm[1]);
-                const m = Number(dm[2]);
-                const y = Number(dm[3]);
-                // Use end-of-day so collections for 'today' count as upcoming for the whole day
-                const date = new Date(y, m - 1, d, 23, 59, 59, 999);
-                return { el: li, date: date, type: typeText };
-            }
-
-            // Try ISO YYYY-MM-DD anywhere in the text
-            const iso = dateText.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
-            if (iso) {
-                const y = Number(iso[1]);
-                const m = Number(iso[2]);
-                const d = Number(iso[3]);
-                const date = new Date(y, m - 1, d, 23, 59, 59, 999);
-                return { el: li, date: date, type: typeText };
-            }
-
-            // Could not parse
-            return null;
-        })
-        .filter(Boolean);
+    const binNodes = Array.from(document.querySelectorAll('#binList .bin-item'));
+    const binItems = binNodes.map(li => {
+        const dateEl = li.querySelector('.item-date');
+        const badgeEl = li.querySelector('.bin-badge');
+        if (!dateEl) return null;
+        const dateText = (dateEl.textContent || '').trim();
+        const typeText = (badgeEl && badgeEl.textContent) ? badgeEl.textContent.trim() : '';
+        const date = parseBinDateFromText(dateText);
+        if (!date) return null;
+        return { el: li, date, type: typeText };
+    }).filter(Boolean);
 
     let nextBin = null;
     for (const item of binItems) {
