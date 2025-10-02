@@ -20,7 +20,7 @@ docker-build:
 # Show available targets
 help:
 	@echo "Available targets:"
-	@echo "  run          - Run the application using './run.sh'"
+	@echo "  run          - Run the application directly using uv"
 	@echo "  clean        - Clean up temporary Python files"
 	@echo "  docker-run   - Run the app using docker compose"
 	@echo "  docker-build - Build and push images (calls './build_and_push.sh')"

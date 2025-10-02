@@ -42,6 +42,9 @@ body {
     display: flex;
     gap: 20px;
     padding: 0 20px;
+    /* Allow containers to wrap on smaller screens instead of overflowing */
+    flex-wrap: wrap;
+    align-items: flex-start;
 }
 
 .container {
@@ -70,6 +73,20 @@ h2 {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+/* Headings: make h1 clearly larger than h3 (subheading) */
+h1 {
+    font-size: 1.6rem;
+    margin: 0 0 8px 0;
+    line-height: 1.1;
+}
+
+h3 {
+    font-size: 1rem;
+    margin: 0 0 12px 0;
+    color: var(--secondary);
+    font-weight: 500;
 }
 
 ul {
@@ -179,4 +196,113 @@ small {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* Responsive rules for small screens */
+@media (max-width: 800px) {
+    .clock {
+        font-size: 2em;
+        padding: 16px;
+    }
+
+    .container-row {
+        gap: 14px;
+        padding: 0 12px;
+    }
+
+    .container {
+        flex: 1 1 100%;
+        min-width: 0;
+        /* allow shrinking inside wrapped flex */
+        padding: 16px;
+    }
+
+    h1 {
+        font-size: 1.25rem;
+    }
+
+    h3 {
+        font-size: 0.98rem;
+    }
+
+    .countdown {
+        font-size: 1em;
+        padding: 8px;
+    }
+
+    li {
+        padding: 12px;
+    }
+
+    /* On small screens, limit tram times list (first container) to 3 items to reduce vertical clutter */
+    .container:first-of-type ul li:nth-child(n+4) {
+        display: none;
+    }
+
+    /* Also limit fixtures (2nd container) and bins (3rd container) to first 3 items on small screens */
+    .container:nth-of-type(2) ul li:nth-child(n+4),
+    .container:nth-of-type(3) ul li:nth-child(n+4),
+    #binList .bin-item:nth-child(n+4) {
+        display: none;
+    }
+
+    .bin-row {
+        /* keep date and badge on the same line for better readability on phones */
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+
+    .bin-badge {
+        max-width: 40%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.9em;
+        padding: 6px 10px;
+        flex: 0 0 auto;
+        /* don't let badge shrink too far */
+    }
+
+    .item-date {
+        min-width: 0;
+        /* allow date to shrink inside flex */
+        flex: 1 1 auto;
+    }
+
+    /* Reduce hover/transform on touch devices to avoid janky behaviour */
+    li:hover {
+        transform: none;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 420px) {
+    .clock {
+        font-size: 1.4em;
+        padding: 10px;
+    }
+
+    .container {
+        padding: 12px;
+        border-radius: 8px;
+    }
+
+    h1 {
+        font-size: 1.05rem;
+    }
+
+    h3 {
+        font-size: 0.95rem;
+    }
+
+    .item-date {
+        font-size: 0.95em;
+    }
+
+    .bin-badge {
+        font-size: 0.85em;
+        padding: 6px 8px;
+    }
 }

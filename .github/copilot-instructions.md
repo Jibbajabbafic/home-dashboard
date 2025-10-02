@@ -15,7 +15,7 @@ This is a simple web app designed to display upcoming tram times and football fi
 ## Developer Workflows
 
 - **Build & Run:**
-  - Use `./run.sh` to build and start the app in Docker. This script handles all necessary setup.
+ - Use `make run` to build and start the app in Docker. This target handles all necessary setup.
 - **Deployment:**
   - Use `build_and_push.sh` to build and push Docker images for deployment.
 - **Configuration:**
@@ -35,7 +35,7 @@ This is a simple web app designed to display upcoming tram times and football fi
 
 ## Examples
 
-- To start development: `./run.sh`
+- To start development: `make run`
 - To deploy: `./build_and_push.sh`
 
 ## Guidance for AI Agents
