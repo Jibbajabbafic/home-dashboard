@@ -7,11 +7,12 @@ Usage: $(basename "$0") [--major] [--push]
 
 Create a new git tag. By default increments the minor version (e.g. 0.1 -> 0.2).
 Use --major to increment the major version (e.g. 0.1 -> 1.0).
-The script prints the proposed tag and asks for confirmation before creating it.
+If --push is provided the script will create the tag and push it to 'origin' without asking.
+Otherwise the script will ask to confirm creation and then ask whether to push.
 
 Options:
   --major    Increment the major version (minor resets to 0)
-  --push     Push the created tag to 'origin' after creation
+  --push     Create and push the tag to 'origin' without prompting
   -h, --help Show this help and exit
 EOF
 }
@@ -71,23 +72,36 @@ fi
 
 proposed_tag="${prefix}${new_major}.${new_minor}"
 
-echo "Latest tag: ${latest_tag:-<none>}"
-echo "Proposed tag: ${proposed_tag}"
+if [[ "$PUSH" = true ]]; then
+  # Non-interactive create+push
+  git tag -a "$proposed_tag" -m "Release $proposed_tag"
+  echo "Created tag $proposed_tag"
+  git push origin "$proposed_tag"
+  echo "Pushed tag $proposed_tag to origin"
+else
+  echo "Latest tag: ${latest_tag:-<none>}"
+  echo "Proposed tag: ${proposed_tag}"
 
-read -r -p "Create tag ${proposed_tag}? [y/N] " confirm
-case "$confirm" in
-  [yY]|[yY][eE][sS])
-    git tag -a "$proposed_tag" -m "Release $proposed_tag"
-    echo "Created tag $proposed_tag"
-    if [[ "$PUSH" = true ]]; then
-      git push origin "$proposed_tag"
-      echo "Pushed tag $proposed_tag to origin"
-    else
-      echo "To push the tag: git push origin $proposed_tag"
-    fi
-    ;;
-  *)
-    echo "Aborted. No tag created."
-    exit 0
-    ;;
-esac
+  read -r -p "Create tag ${proposed_tag}? [y/N] " confirm
+  case "$confirm" in
+    [yY]|[yY][eE][sS])
+      git tag -a "$proposed_tag" -m "Release $proposed_tag"
+      echo "Created tag $proposed_tag"
+      # Ask interactively whether to push now
+      read -r -p "Push tag ${proposed_tag} to origin now? [y/N] " push_confirm
+      case "$push_confirm" in
+        [yY]|[yY][eE][sS])
+          git push origin "$proposed_tag"
+          echo "Pushed tag $proposed_tag to origin"
+          ;;
+        *)
+          echo "Tag created locally. To push later: git push origin $proposed_tag"
+          ;;
+      esac
+      ;;
+    *)
+      echo "Aborted. No tag created."
+      exit 0
+      ;;
+  esac
+fi
