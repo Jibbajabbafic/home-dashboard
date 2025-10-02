@@ -1,10 +1,12 @@
+import logging
 import os
 import re
 import time
 import urllib.request
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Any, Callable, Dict, Tuple
+from pathlib import Path
+from typing import Any, Callable, Dict, Optional, Tuple
 
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -12,6 +14,30 @@ from flask import Flask, Response, render_template
 
 # Load environment variables
 load_dotenv()
+
+
+def load_file_content(file_path: str) -> Optional[str]:
+    """
+    Load a text file relative to this module's directory and return its contents.
+
+    Parameters
+    - file_path: Path relative to the package root (for example: 'static/css/style.css').
+
+    Returns
+    - The file contents as a string, or None if the file cannot be read.
+    """
+    base = Path(__file__).resolve().parent
+    target = base.joinpath(file_path).resolve()
+    # Prevent path traversal: ensure the resolved target is inside the package directory
+    if not target.is_relative_to(base):
+        logging.warning("load_file_content: attempted path traversal: %s", target)
+        return None
+    try:
+        return target.read_text(encoding="utf8")
+    except FileNotFoundError:
+        logging.warning("load_file_content: file not found: %s", target)
+        return None
+
 
 # Get configuration with defaults
 TRAM_STOP_REF = os.getenv("TRAM_STOP_REF", "9400ZZSYMID1")
@@ -23,6 +49,11 @@ if not BIN_PROPERTY_ID:
     raise RuntimeError(
         "Environment variable BIN_PROPERTY_ID is required. Set it to the property ID from wasteservices.sheffield.gov.uk"
     )
+
+
+# Preload inline assets at startup (always use inline; fall back to empty string)
+INLINE_CSS_CONTENT = load_file_content("static/css/style.css") or ""
+INLINE_JS_CONTENT = load_file_content("static/js/app.js") or ""
 
 
 # Cache decorator with timeout
@@ -242,18 +273,12 @@ def get_bin_collections() -> list[dict[str, str]]:
     # Only use the targeted parsing above which extracts rows with 'service-id-*'.
 
     # Sort collections by date
-    try:
-        collections.sort(key=lambda x: x["date"])
-    except Exception:
-        pass
+    collections.sort(key=lambda x: x["date"])
 
     return collections
 
 
 app = Flask(__name__)
-
-# The HTML, CSS and JS are moved to `templates/index.html` and `static/`.
-
 
 # Configure Flask app for production
 app.config["SECRET_KEY"] = "dev"
@@ -272,6 +297,7 @@ def index():
     times = get_tram_times()
     fixtures = get_football_fixtures()
     bin_collections = get_bin_collections()
+
     return render_template(
         "index.html",
         times=times,
@@ -279,6 +305,8 @@ def index():
         bin_collections=bin_collections,
         stop_name=TRAM_STOP_NAME,
         football_team_name=FOOTBALL_TEAM_NAME,
+        inline_css=INLINE_CSS_CONTENT,
+        inline_js=INLINE_JS_CONTENT,
     )
 
 
