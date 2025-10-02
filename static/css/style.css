@@ -116,6 +116,26 @@ li.imminent {
     overflow: hidden;
 }
 
+/* Swipe-away removal animation
+   - When the `.swipe-away` class is applied, the item translates left and fades out.
+   - We also animate height/padding/margin to collapse the DOM space smoothly. */
+.swipe-away {
+    transform: translateX(-20px);
+    opacity: 0;
+}
+
+.removing {
+    transition: transform 360ms ease, opacity 360ms ease, height 360ms ease, margin 360ms ease, padding 360ms ease;
+    transform: translateX(-100%) !important;
+    opacity: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-left-width: 0 !important;
+    height: 0 !important;
+}
+
 li.imminent::after {
     content: '';
     position: absolute;

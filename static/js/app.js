@@ -54,6 +54,54 @@ function parseBinDateFromText(dateText) {
     return null;
 }
 
+// Remove an element with a swipe-away animation then remove from DOM.
+function removeWithSwipe(el) {
+    if (!el || el.__removing) return;
+    el.__removing = true;
+
+    // capture current height so we can animate height -> 0
+    const height = el.getBoundingClientRect().height;
+    el.style.height = `${height}px`;
+    el.style.overflow = 'hidden';
+
+    // Stop any ongoing 'imminent' animation to avoid transform conflicts
+    el.classList.remove('imminent');
+    // disable animations on the element (covers inline/stylesheet animations)
+    el.style.animation = 'none';
+    el.style.webkitAnimation = 'none';
+
+    // small initial translate for a swiping effect, then collapse
+    // use requestAnimationFrame to ensure styles are applied
+    requestAnimationFrame(() => {
+        el.classList.add('swipe-away');
+        // force reflow
+        // eslint-disable-next-line no-unused-expressions
+        el.offsetHeight;
+        el.classList.add('removing');
+        el.style.height = '0px';
+        el.style.paddingTop = '0px';
+        el.style.paddingBottom = '0px';
+        el.style.marginTop = '0px';
+        el.style.marginBottom = '0px';
+    });
+
+    const onEnd = (ev) => {
+        // wait for height transition or transform to finish
+        if (ev.propertyName === 'height' || ev.propertyName === 'transform') {
+            cleanup();
+        }
+    };
+
+    function cleanup() {
+        el.removeEventListener('transitionend', onEnd);
+        if (el.parentNode) el.parentNode.removeChild(el);
+    }
+
+    el.addEventListener('transitionend', onEnd);
+    // Fallback in case transitionend doesn't fire
+    setTimeout(() => { if (el.parentNode) cleanup(); }, 800);
+}
+
 function getNextTramTime() {
     const times = Array.from(document.querySelectorAll('.container:first-of-type ul li'))
         .map(li => li.textContent.trim().split(' ')[0])
@@ -92,7 +140,7 @@ function updateCountdowns() {
         const tramTimeToday = parseTime(time, false); // don't roll -- used to decide removal
         if (!tramTimeToday) return;
         if (tramTimeToday <= now) {
-            item.remove();
+            removeWithSwipe(item);
             return;
         }
         const minutesUntil = Math.floor((tramTimeToday - now) / 60000);
@@ -105,6 +153,12 @@ function updateCountdowns() {
     fixtureItems.forEach(item => {
         const fixtureDate = parseFixtureFromText(item.textContent || '');
         if (!fixtureDate) return;
+        // If the fixture date/time has passed, remove it with animation
+        if (fixtureDate <= now) {
+            removeWithSwipe(item);
+            return;
+        }
+
         if (fixtureDate.toDateString() === now.toDateString()) item.classList.add('imminent');
         else item.classList.remove('imminent');
     });
@@ -146,6 +200,14 @@ function updateCountdowns() {
     }).filter(Boolean);
 
     let nextBin = null;
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Remove past bin items (dates before today)
+    binItems.forEach(b => {
+        if (b.date < startOfToday) {
+            removeWithSwipe(b.el);
+        }
+    });
     for (const item of binItems) {
         if (item.date >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
             if (!nextBin || item.date < nextBin.date) nextBin = item;
@@ -172,7 +234,7 @@ function updateCountdowns() {
 
         // Highlight bin items that are imminent (within 24 hours)
         document.querySelectorAll('#binList .bin-item').forEach(el => el.classList.remove('next'));
-        nextBin.el.classList.add('imminent');
+        if (!nextBin.el.__removing) nextBin.el.classList.add('imminent');
     } else {
         document.getElementById('nextBinCountdown').textContent = 'No upcoming bin collections';
     }
