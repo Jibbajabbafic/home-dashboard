@@ -5,5 +5,16 @@ services:
     # flask requires SIGINT to stop gracefully
     # (default stop signal from Compose is SIGTERM)
     stop_signal: SIGINT
+    # Add labels so watchtower can auto-update the container
+    # labels:
+    #   - "com.centurylinklabs.watchtower.scope=dev"
     ports:
       - '3000:3000'
+  # Optionally enable watchtower to auto-update the container frequently
+  # watchtower-dev:
+  #   image: containrrr/watchtower:latest
+  #   restart: unless-stopped
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   # Poll every 30 seconds for faster updates for the scoped container
+  #   command: --cleanup=true --scope dev --interval 30
