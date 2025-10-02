@@ -44,10 +44,16 @@ fi
 
 echo "Building and pushing ${TAG_SHA} and ${TAG_LATEST}..."
 
+# Build an array of -t tags to pass to docker. This avoids complex inline quoting
+# and prevents mismatched quotes when TAG_RELEASE is empty.
+DOCKER_TAGS=("-t" "${TAG_SHA}")
+if [ -n "${TAG_RELEASE}" ]; then
+  DOCKER_TAGS+=("-t" "${TAG_RELEASE}")
+fi
+DOCKER_TAGS+=("-t" "${TAG_LATEST}")
+
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  -t "${TAG_SHA}" \
-  $( [ -n "$TAG_RELEASE" ] && printf '%s\n' "-t \"${TAG_RELEASE}\" \")
-  -t "${TAG_LATEST}" \
+  "${DOCKER_TAGS[@]}" \
   --label "org.opencontainers.image.revision=${GIT_SHA}" \
   --push .
