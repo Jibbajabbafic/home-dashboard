@@ -4,7 +4,8 @@
 <head>
     <title>Dashboard</title>
     <meta http-equiv="refresh" content="300">
-    <style>{{ inline_css | safe }}</style>
+    <!-- Inline CSS so page loads as a single file -->
+    {{ inline_css | safe }}
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
@@ -27,7 +28,7 @@
         <div class="container">
             <div class="countdown" id="nextFixtureCountdown">Next match in: calculating...</div>
             <h1>⚽ Upcoming Fixtures</h1>
-            <h3>{{ football_team_name }} Home Matches</h3>
+            <h3>{{ football_team_name }} Home Games</h3>
             <ul>
                 {% for fixture in fixtures %}
                 <li>
@@ -61,7 +62,8 @@
             </ul>
         </div>
     </div>
-    <script> {{ inline_js | safe }} </script>
+    <!-- Inline JS so page loads as a single file -->
+    {{ inline_js | safe }}
 </body>
 
 </html>

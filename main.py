@@ -40,10 +40,8 @@ def load_file_content(file_path: str) -> Optional[str]:
 
 
 # Get configuration with defaults
-TRAM_STOP_REF = os.getenv("TRAM_STOP_REF", "9400ZZSYMID1")
-TRAM_STOP_NAME = os.getenv("TRAM_STOP_NAME", "Middlewood To City")
+TRANSIT_STOP_ID = os.getenv("TRANSIT_STOP_ID", "9400ZZSYMID1")
 FOOTBALL_TEAM_ID = os.getenv("FOOTBALL_TEAM_ID", "sheffield-wednesday")
-FOOTBALL_TEAM_NAME = os.getenv("FOOTBALL_TEAM_NAME", "Sheffield Wednesday")
 BIN_PROPERTY_ID = os.getenv("BIN_PROPERTY_ID")
 if not BIN_PROPERTY_ID:
     raise RuntimeError(
@@ -92,18 +90,19 @@ def cache_with_timeout(
     return decorator
 
 
-@cache_with_timeout(30)  # Cache tram times for 30 seconds
-def get_tram_times() -> list[tuple[str, str, str, str]]:
+@cache_with_timeout(30)  # Cache transit times for 30 seconds
+def get_transit_times() -> tuple[str, list[tuple[str, str, str, str]]]:
     # Construct URL with environment variables
-    url = f"https://bustimes.org/stops/{TRAM_STOP_REF}"
+    url = f"https://bustimes.org/stops/{TRANSIT_STOP_ID}"
 
     req = urllib.request.Request(url)
     with urllib.request.urlopen(req) as response:
         html_content = response.read().decode("utf-8")
 
     soup = BeautifulSoup(html_content, "html.parser")
-    tram_times: list[tuple[str, str, str, str]] = []
+    transit_times: list[tuple[str, str, str, str]] = []
 
+    stop_name = soup.find("h1").text.strip()
     # Find all tables - multiple if spread across days
     tables = soup.find_all("table")
     for table in tables:
@@ -119,7 +118,7 @@ def get_tram_times() -> list[tuple[str, str, str, str]]:
                     kelham_time = parsed_time + timedelta(minutes=12)
                     university_time = parsed_time + timedelta(minutes=16)
                     cathedral_time = parsed_time + timedelta(minutes=20)
-                    tram_times.append(
+                    transit_times.append(
                         (
                             time_str,
                             kelham_time.strftime("%H:%M"),
@@ -128,11 +127,11 @@ def get_tram_times() -> list[tuple[str, str, str, str]]:
                         )
                     )
 
-    return tram_times
+    return (stop_name, transit_times)
 
 
 @cache_with_timeout(3600)  # Cache fixtures for 1 hour
-def get_football_fixtures() -> list[dict[str, str]]:
+def get_football_fixtures() -> tuple[str, list[dict[str, str]]]:
     fixture_limit = 5
     url = f"https://fixtur.es/en/team/{FOOTBALL_TEAM_ID}/home"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -142,7 +141,7 @@ def get_football_fixtures() -> list[dict[str, str]]:
     soup = BeautifulSoup(html_content, "html.parser")
     fixtures: list[dict[str, str]] = []
     today = datetime.now().date()
-
+    team_name = soup.find("h2").text.strip().replace("Home games of ", "")
     # Find the fixtures container
     fixtures_div = soup.find("div", class_="wedstrijden")
     if fixtures_div:
@@ -197,7 +196,7 @@ def get_football_fixtures() -> list[dict[str, str]]:
                     )
                     break
 
-    return fixtures
+    return (team_name, fixtures)
 
 
 # Bin collections are relatively static; cache for 12 hours
@@ -294,8 +293,8 @@ def after_request(response: Response) -> Response:
 
 @app.route("/")
 def index():
-    times = get_tram_times()
-    fixtures = get_football_fixtures()
+    stop_name, times = get_transit_times()
+    team_name, fixtures = get_football_fixtures()
     bin_collections = get_bin_collections()
 
     return render_template(
@@ -303,10 +302,10 @@ def index():
         times=times,
         fixtures=fixtures,
         bin_collections=bin_collections,
-        stop_name=TRAM_STOP_NAME,
-        football_team_name=FOOTBALL_TEAM_NAME,
-        inline_css=INLINE_CSS_CONTENT,
-        inline_js=INLINE_JS_CONTENT,
+        stop_name=stop_name,
+        football_team_name=team_name,
+        inline_css=f"<style>{INLINE_CSS_CONTENT}</style>",
+        inline_js=f"<script>{INLINE_JS_CONTENT}</script>",
     )
 
 

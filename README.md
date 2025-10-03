@@ -13,3 +13,10 @@ This release includes small responsive CSS improvements so the dashboard display
 - Reduced large hover transforms for touch devices.
 
 To test locally, build and run with the normal `make run` workflow and open the page on a phone or in your browser's responsive mode.
+
+# TODO
+Potential future work
+- Auto detect bus or tram and change naming/emoji
+- Support stops with multiple routes
+- Make arrival times dynamic (don't hardcode)
+
