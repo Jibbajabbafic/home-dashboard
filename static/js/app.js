@@ -128,6 +128,40 @@ function getNextFixtureTime() {
     return nextTime;
 }
 
+// Parse bin collection list and return parsed items + the next upcoming collection
+function getNextBinCollection() {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const binNodes = Array.from(document.querySelectorAll('#binList .bin-item'));
+    const items = binNodes.map(li => {
+        const dateEl = li.querySelector('.item-date');
+        const badgeEl = li.querySelector('.bin-badge');
+        if (!dateEl) return null;
+        const dateText = (dateEl.textContent || '').trim();
+        const typeText = (badgeEl && badgeEl.textContent) ? badgeEl.textContent.trim() : '';
+        const date = parseBinDateFromText(dateText);
+        if (!date) return null;
+        return { el: li, date, type: typeText };
+    }).filter(Boolean);
+
+    // Remove past bin items (dates before today)
+    items.forEach(b => {
+        if (b.date < startOfToday) {
+            removeWithSwipe(b.el);
+        }
+    });
+
+    let next = null;
+    for (const item of items) {
+        if (item.date >= startOfToday) {
+            if (!next || item.date < next.date) next = item;
+        }
+    }
+
+    return next;
+}
+
 function updateCountdowns() {
     const now = new Date();
 
@@ -186,34 +220,8 @@ function updateCountdowns() {
             `Next match in: ${daysFix}d ${hoursFix}h ${minutesFix}m`;
     }
 
-    // Update bin collections
-    const binNodes = Array.from(document.querySelectorAll('#binList .bin-item'));
-    const binItems = binNodes.map(li => {
-        const dateEl = li.querySelector('.item-date');
-        const badgeEl = li.querySelector('.bin-badge');
-        if (!dateEl) return null;
-        const dateText = (dateEl.textContent || '').trim();
-        const typeText = (badgeEl && badgeEl.textContent) ? badgeEl.textContent.trim() : '';
-        const date = parseBinDateFromText(dateText);
-        if (!date) return null;
-        return { el: li, date, type: typeText };
-    }).filter(Boolean);
-
-    let nextBin = null;
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    // Remove past bin items (dates before today)
-    binItems.forEach(b => {
-        if (b.date < startOfToday) {
-            removeWithSwipe(b.el);
-        }
-    });
-    for (const item of binItems) {
-        if (item.date >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
-            if (!nextBin || item.date < nextBin.date) nextBin = item;
-        }
-    }
-
+    // Update bin collections (delegated to helper)
+    const nextBin = getNextBinCollection();
     if (nextBin) {
         // Show simplified countdown: Today / Tomorrow / X days
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -232,9 +240,20 @@ function updateCountdowns() {
 
         document.getElementById('nextBinCountdown').textContent = `Next bin: ${label}`;
 
-        // Highlight bin items that are imminent (within 24 hours)
-        document.querySelectorAll('#binList .bin-item').forEach(el => el.classList.remove('next'));
-        if (!nextBin.el.__removing) nextBin.el.classList.add('imminent');
+        // Only highlight bin items if they are today or tomorrow
+        document.querySelectorAll('#binList .bin-item').forEach(el => {
+            el.classList.remove('next', 'imminent');
+        });
+
+        if (!nextBin.el.__removing) {
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const startOfDayAfterTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+
+            // Add imminent class only if the bin collection is today or tomorrow
+            if (nextBin.date >= startOfToday && nextBin.date < startOfDayAfterTomorrow) {
+                nextBin.el.classList.add('imminent');
+            }
+        }
     } else {
         document.getElementById('nextBinCountdown').textContent = 'No upcoming bin collections';
     }
