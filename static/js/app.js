@@ -128,6 +128,30 @@ function getNextFixtureTime() {
     return nextTime;
 }
 
+// Return a fixture Date that is either currently ongoing/finishing (kickoff -> +2.5h)
+// or the next future fixture. This lets the countdown show 'ongoing'/'finishing'
+// for matches that have already kicked off.
+function getRelevantFixtureTime() {
+    const fixtures = Array.from(document.querySelectorAll('.container:nth-of-type(2) ul li'))
+        .map(li => parseFixtureFromText(li.textContent || ''))
+        .filter(Boolean)
+        .sort((a, b) => a - b);
+    const now = new Date();
+
+    // Prefer a fixture where now is between kickoff and kickoff + 2.5h
+    for (const f of fixtures) {
+        const end = new Date(f.getTime() + (2.5 * 60 * 60 * 1000));
+        if (now >= f && now < end) return f;
+    }
+
+    // Otherwise return the next future fixture
+    for (const f of fixtures) {
+        if (f > now) return f;
+    }
+
+    return null;
+}
+
 // Parse bin collection list and return parsed items + the next upcoming collection
 function getNextBinCollection() {
     const now = new Date();
@@ -229,14 +253,40 @@ function updateCountdowns() {
     }
 
     // Update fixture countdown
-    const nextFixture = getNextFixtureTime();
+    const nextFixture = getRelevantFixtureTime();
     if (nextFixture) {
-        const diffFixture = Math.max(0, nextFixture - now);
-        const daysFix = Math.floor(diffFixture / (1000 * 60 * 60 * 24));
-        const hoursFix = Math.floor((diffFixture % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutesFix = Math.floor((diffFixture % (1000 * 60 * 60)) / (1000 * 60));
-        document.getElementById('nextFixtureCountdown').textContent =
-            `Next match in: ${daysFix}d ${hoursFix}h ${minutesFix}m`;
+        // Windows:
+        // ongoing: kick-off -> kick-off + 2h
+        // finishing: kick-off + 2h -> kick-off + 2.5h
+        // removal: after kick-off + 2.5h
+        const kickoff = new Date(nextFixture.getTime());
+        const ongoingEnd = new Date(kickoff.getTime() + (2 * 60 * 60 * 1000));
+        const finishingEnd = new Date(kickoff.getTime() + (2.5 * 60 * 60 * 1000));
+
+        if (now >= kickoff && now < ongoingEnd) {
+            // Match ongoing
+            const remaining = Math.max(0, ongoingEnd - now);
+            const hoursLeft = Math.floor(remaining / (1000 * 60 * 60));
+            const minutesLeft = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+            document.getElementById('nextFixtureCountdown').textContent =
+                `Match ongoing — ${hoursLeft}h ${minutesLeft}m left`;
+        } else if (now >= ongoingEnd && now < finishingEnd) {
+            // Match finishing window
+            const remaining = Math.max(0, finishingEnd - now);
+            const minutesLeft = Math.ceil(remaining / (1000 * 60));
+            document.getElementById('nextFixtureCountdown').textContent =
+                `Match finishing — ${minutesLeft}m left`;
+        } else if (now >= finishingEnd) {
+            // Past finishing window: nothing to show here (items are removed elsewhere)
+            document.getElementById('nextFixtureCountdown').textContent = 'No ongoing match';
+        } else {
+            const diffFixture = Math.max(0, nextFixture - now);
+            const daysFix = Math.floor(diffFixture / (1000 * 60 * 60 * 24));
+            const hoursFix = Math.floor((diffFixture % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutesFix = Math.floor((diffFixture % (1000 * 60 * 60)) / (1000 * 60));
+            document.getElementById('nextFixtureCountdown').textContent =
+                `Next match in: ${daysFix}d ${hoursFix}h ${minutesFix}m`;
+        }
     }
 
     // Update bin collections (delegated to helper)
