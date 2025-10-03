@@ -268,7 +268,9 @@ def get_bin_collections() -> list[dict[str, str]]:
     # Sort collections by date
     collections.sort(key=lambda x: x["date"])
 
-    return collections
+    # Limit number of returned collections to avoid an excessively long list in the UI
+    MAX_COLLECTIONS = 8
+    return collections[:MAX_COLLECTIONS]
 
 
 app = Flask(__name__)
