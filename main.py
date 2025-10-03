@@ -91,7 +91,7 @@ def cache_with_timeout(
 
 
 @cache_with_timeout(30)  # Cache transit times for 30 seconds
-def get_transit_times() -> tuple[str, list[tuple[str, str, str, str]]]:
+def get_transit_times() -> tuple[str, list[tuple[str, str, str, str]], str]:
     # Construct URL with environment variables
     url = f"https://bustimes.org/stops/{TRANSIT_STOP_ID}"
 
@@ -103,6 +103,15 @@ def get_transit_times() -> tuple[str, list[tuple[str, str, str, str]]]:
     transit_times: list[tuple[str, str, str, str]] = []
 
     stop_name = soup.find("h1").text.strip()
+
+    # Determine if this is a tram or bus stop based on the presence of 'national tram' in the HTML
+    html_lower = html_content.lower()
+    # match 'national tram' allowing spaces or hyphens (e.g. 'national-tram', 'national   tram')
+    if re.search(r"national[\s-]*tram", html_lower):
+        transit_mode = "tram"
+    else:
+        transit_mode = "bus"
+
     # Find all tables - multiple if spread across days
     tables = soup.find_all("table")
     for table in tables:
@@ -127,7 +136,7 @@ def get_transit_times() -> tuple[str, list[tuple[str, str, str, str]]]:
                         )
                     )
 
-    return (stop_name, transit_times)
+    return (stop_name, transit_times, transit_mode)
 
 
 @cache_with_timeout(3600)  # Cache fixtures for 1 hour
@@ -289,7 +298,7 @@ def after_request(response: Response) -> Response:
 
 @app.route("/")
 def index():
-    stop_name, times = get_transit_times()
+    stop_name, times, transit_mode = get_transit_times()
     team_name, fixtures = get_football_fixtures()
     bin_collections = get_bin_collections()
 
@@ -306,6 +315,7 @@ def index():
         football_team_name=team_name,
         inline_css=f"<style>{INLINE_CSS_CONTENT}</style>",
         inline_js=f"<script>{INLINE_JS_CONTENT}</script>",
+        transit_mode=transit_mode,
         show_debug=show_debug,
     )
 

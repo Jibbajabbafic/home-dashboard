@@ -102,16 +102,16 @@ function removeWithSwipe(el) {
     setTimeout(() => { if (el.parentNode) cleanup(); }, 800);
 }
 
-function getNextTramTime() {
-    const times = Array.from(document.querySelectorAll('.container:first-of-type ul li'))
+function getNextTransitTime() {
+    const times = Array.from(document.querySelectorAll('#transitContainer ul li'))
         .map(li => li.textContent.trim().split(' ')[0])
         .filter(Boolean);
     const now = new Date();
     let nextTime = null;
     for (const time of times) {
-        const tramTime = parseTime(time, true); // roll to next day if needed
-        if (!tramTime) continue;
-        if (tramTime > now && (!nextTime || tramTime < nextTime)) nextTime = tramTime;
+        const serviceTime = parseTime(time, true); // roll to next day if needed
+        if (!serviceTime) continue;
+        if (serviceTime > now && (!nextTime || serviceTime < nextTime)) nextTime = serviceTime;
     }
     return nextTime;
 }
@@ -189,21 +189,21 @@ function getNextBinCollection() {
 function updateCountdowns() {
     const now = new Date();
 
-    // Update tram countdown and remove passed times
+    // Update transit countdown and remove passed times
     // Cache selectors
-    const tramItems = document.querySelectorAll('.container:first-of-type ul li');
-    tramItems.forEach(item => {
+    const transitItems = document.querySelectorAll('#transitContainer ul li');
+    transitItems.forEach(item => {
         const text = item.textContent.trim();
         const time = text.split(' ')[0];
-        // Use rolled time so a tram at e.g. 00:10 after midnight is considered next day
-        const tramTime = parseTime(time, true);
-        if (!tramTime) return;
-        // If the tram time (possibly rolled to tomorrow) is already past, remove it
-        if (tramTime <= now) {
+        // Use rolled time so a service at e.g. 00:10 after midnight is considered next day
+        const transitTime = parseTime(time, true);
+        if (!transitTime) return;
+        // If the transit time (possibly rolled to tomorrow) is already past, remove it
+        if (transitTime <= now) {
             removeWithSwipe(item);
             return;
         }
-        const minutesUntil = Math.floor((tramTime - now) / 60000);
+        const minutesUntil = Math.floor((transitTime - now) / 60000);
         if (minutesUntil <= 15) item.classList.add('imminent');
         else item.classList.remove('imminent');
     });
@@ -240,16 +240,20 @@ function updateCountdowns() {
         }
     });
 
-    // Update countdown for next tram
-    const nextTram = getNextTramTime();
-    if (nextTram) {
-        const diffTram = Math.max(0, nextTram - now);
+    // Update countdown for next transit (tram or bus)
+    const nextTransit = getNextTransitTime();
+    const transitLabelEl = document.getElementById('nextTransitCountdown');
+    // derive readable noun from container data attribute
+    const transitContainer = document.getElementById('transitContainer');
+    const mode = transitContainer ? transitContainer.getAttribute('data-transit-mode') : 'tram';
+    const noun = mode === 'bus' ? 'bus' : 'tram';
+    if (nextTransit) {
+        const diffTram = Math.max(0, nextTransit - now);
         const minutesTram = Math.floor(diffTram / 60000);
         const secondsTram = Math.floor((diffTram % 60000) / 1000);
-        document.getElementById('nextTramCountdown').textContent =
-            `Next tram in: ${minutesTram}m ${secondsTram}s`;
+        transitLabelEl.textContent = `Next ${noun} in: ${minutesTram}m ${secondsTram}s`;
     } else {
-        document.getElementById('nextTramCountdown').textContent = 'No upcoming trams';
+        transitLabelEl.textContent = `No upcoming ${noun}s`;
     }
 
     // Update fixture countdown
@@ -331,7 +335,7 @@ function updateCountdowns() {
 // Debug helpers
 function gatherDebugInfo() {
     const now = new Date();
-    const tramTimes = Array.from(document.querySelectorAll('.container:first-of-type ul li'))
+    const tramTimes = Array.from(document.querySelectorAll('#transitContainer ul li'))
         .map(li => li.textContent.trim().split(' ')[0]).filter(Boolean);
 
     const fixtures = Array.from(document.querySelectorAll('.container:nth-of-type(2) ul li'))
@@ -352,7 +356,7 @@ function renderDebugPanel() {
     const info = gatherDebugInfo();
     let html = '';
     html += `<div><strong>Now:</strong> ${info.now.toString()}</div>`;
-    html += `<div style="margin-top:6px"><strong>Tram times:</strong><pre>${JSON.stringify(info.tramTimes, null, 2)}</pre></div>`;
+    html += `<div style="margin-top:6px"><strong>Transit times:</strong><pre>${JSON.stringify(info.tramTimes, null, 2)}</pre></div>`;
     html += `<div style="margin-top:6px"><strong>Fixtures (text / parsed):</strong><pre>${info.fixtures.map(f => f.text + ' => ' + (f.parsed ? f.parsed.toString() : 'null')).join('\n')}</pre></div>`;
     html += `<div style="margin-top:6px"><strong>Relevant fixture:</strong> ${info.relevant ? info.relevant.toString() : 'null'}</div>`;
     html += `<div style="margin-top:6px"><strong>Bins:</strong><pre>${JSON.stringify(info.bins, null, 2)}</pre></div>`;

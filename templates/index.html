@@ -14,9 +14,13 @@
         <div class="clock-content" id="clock">00:00:00</div>
     </div>
     <div class="container-row">
-        <div class="container">
-            <div class="countdown" id="nextTramCountdown">Next tram in: calculating...</div>
+        <div class="container" id="transitContainer" data-transit-mode="{{ transit_mode }}">
+            <div class="countdown" id="nextTransitCountdown">Next transit in: calculating...</div>
+            {% if transit_mode == 'tram' %}
             <h1>🚊 Tram Times</h1>
+            {% else %}
+            <h1>🚌 Bus Times</h1>
+            {% endif %}
             <h3>Departures from: {{ stop_name }}</h3>
             <ul>
                 {% for time in times %}

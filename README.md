@@ -92,7 +92,6 @@ Pull requests are welcome. For small fixes, open a PR with a focused change and 
 ## TODO
 
 Potential future work:
-- Auto-detect bus or tram and change naming/emoji
 - Support stops with multiple routes
 - Make arrival times dynamic (don't hardcode)
 
