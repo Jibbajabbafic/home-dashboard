@@ -1,4 +1,4 @@
-.PHONY: run clean help docker-run docker-build
+.PHONY: run dev clean help docker-run docker-build
 
 # Run using UV
 run:
@@ -39,5 +39,5 @@ help:
 	@echo "  release      - Full release process: bump version, build and push images"
 	@echo "  help         - Show this help message"
 
-# Set run as the default target
+# Set docker-run as the default target
 .DEFAULT_GOAL := docker-run
