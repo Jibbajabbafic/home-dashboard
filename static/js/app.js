@@ -328,6 +328,60 @@ function updateCountdowns() {
     }
 }
 
+// Debug helpers
+function gatherDebugInfo() {
+    const now = new Date();
+    const tramTimes = Array.from(document.querySelectorAll('.container:first-of-type ul li'))
+        .map(li => li.textContent.trim().split(' ')[0]).filter(Boolean);
+
+    const fixtures = Array.from(document.querySelectorAll('.container:nth-of-type(2) ul li'))
+        .map(li => ({ text: li.textContent.trim(), parsed: parseFixtureFromText(li.textContent || '') }));
+
+    const bins = Array.from(document.querySelectorAll('#binList .bin-item'))
+        .map(li => ({ text: (li.querySelector('.item-date') || {}).textContent, badge: (li.querySelector('.bin-badge') || {}).textContent }));
+
+    const relevant = getRelevantFixtureTime();
+
+    return { now, tramTimes, fixtures, bins, relevant };
+}
+
+function renderDebugPanel() {
+    const panel = document.getElementById('debugPanel');
+    const content = document.getElementById('debugContent');
+    if (!panel || !content) return;
+    const info = gatherDebugInfo();
+    let html = '';
+    html += `<div><strong>Now:</strong> ${info.now.toString()}</div>`;
+    html += `<div style="margin-top:6px"><strong>Tram times:</strong><pre>${JSON.stringify(info.tramTimes, null, 2)}</pre></div>`;
+    html += `<div style="margin-top:6px"><strong>Fixtures (text / parsed):</strong><pre>${info.fixtures.map(f => f.text + ' => ' + (f.parsed ? f.parsed.toString() : 'null')).join('\n')}</pre></div>`;
+    html += `<div style="margin-top:6px"><strong>Relevant fixture:</strong> ${info.relevant ? info.relevant.toString() : 'null'}</div>`;
+    html += `<div style="margin-top:6px"><strong>Bins:</strong><pre>${JSON.stringify(info.bins, null, 2)}</pre></div>`;
+    content.innerHTML = html;
+}
+
+// Wire up debug buttons
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('dbgBtn');
+    const panel = document.getElementById('debugPanel');
+    const logBtn = document.getElementById('dbgLog');
+    if (btn && panel) {
+        btn.addEventListener('click', () => {
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            renderDebugPanel();
+        });
+    }
+    if (logBtn) {
+        logBtn.addEventListener('click', () => console.log('Debug', gatherDebugInfo()));
+    }
+});
+
+// Also refresh debug panel on every countdown update
+const _oldUpdate = updateCountdowns;
+updateCountdowns = function () {
+    _oldUpdate();
+    renderDebugPanel();
+};
+
 // Initial update to prevent "calculating..." message
 updateCountdowns();
 // Then set up the interval for continuous updates

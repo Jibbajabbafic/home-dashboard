@@ -291,6 +291,10 @@ def index():
     team_name, fixtures = get_football_fixtures()
     bin_collections = get_bin_collections()
 
+    # Show debug panel when app.debug is True or SHOW_DEBUG env var is set to a truthy value
+    show_debug_env = os.getenv("SHOW_DEBUG", "").lower()
+    show_debug = app.debug or show_debug_env in ("1", "true", "yes")
+
     return render_template(
         "index.html",
         times=times,
@@ -300,6 +304,7 @@ def index():
         football_team_name=team_name,
         inline_css=f"<style>{INLINE_CSS_CONTENT}</style>",
         inline_js=f"<script>{INLINE_JS_CONTENT}</script>",
+        show_debug=show_debug,
     )
 
 

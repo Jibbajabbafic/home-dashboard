@@ -63,6 +63,18 @@
     </div>
     <!-- Inline JS so page loads as a single file -->
     {{ inline_js | safe }}
+    <!-- Debug panel (shown only in development) -->
+    {% if show_debug %}
+    <div id="debugToggle" style="position:fixed;right:12px;bottom:12px;z-index:9999;">
+        <button id="dbgBtn">Toggle Debug</button>
+    </div>
+    <div id="debugPanel"
+        style="display:none;position:fixed;right:12px;bottom:60px;z-index:9999;width:360px;max-height:60vh;overflow:auto;background:#fff;padding:12px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-size:12px;">
+        <h4 style="margin:0 0 8px 0;">Debug</h4>
+        <div id="debugContent">Loading...</div>
+        <div style="margin-top:8px;text-align:right;"><button id="dbgLog">Log to console</button></div>
+    </div>
+    {% endif %}
 </body>
 
 </html>

@@ -1,8 +1,12 @@
 .PHONY: run clean help docker-run docker-build
 
-# Default target
+# Run using UV
 run:
 	uv run main.py
+
+# Run in development mode with auto-reload
+dev:
+	FLASK_DEBUG=1 FLASK_APP=main.py uv run flask run --host=0.0.0.0 --port=3000
 
 # Clean up any temporary files
 clean:
