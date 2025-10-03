@@ -19,11 +19,11 @@ docker-build:
 
 # Full release process: bump version, build and push images
 release:
-	echo "Starting release process..."
+	@echo "Starting release process..."
 	./bump_tag.sh
-	echo "Building docker images..."
+	@echo "Building docker images..."
 	./build_and_push.sh
-	echo "Release process complete."
+	@echo "Release process complete."
 
 # Show available targets
 help:
