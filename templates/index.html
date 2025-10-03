@@ -32,7 +32,6 @@
             <ul>
                 {% for fixture in fixtures %}
                 <li>
-                    {% if fixture.competition %}{{ fixture.competition }} - {% endif %}
                     {% set date = fixture.date.split('-') %}
                     {% set time = fixture.time.split(':') %}
                     <span class="item-date">{{ date[2] }}/{{ date[1] }}/{{ date[0] }} at {{ time[0] }}:{{ time[1]

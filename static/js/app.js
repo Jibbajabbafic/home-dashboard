@@ -184,19 +184,36 @@ function updateCountdowns() {
         else item.classList.remove('imminent');
     });
 
-    // Highlight today's fixtures
+    // Highlight fixtures in a window starting 1 hour before kick-off
+    // until 2.5 hours after kick-off. Only remove fixtures after that window.
     const fixtureItems = document.querySelectorAll('.container:nth-of-type(2) ul li');
     fixtureItems.forEach(item => {
         const fixtureDate = parseFixtureFromText(item.textContent || '');
         if (!fixtureDate) return;
-        // If the fixture date/time has passed, remove it with animation
-        if (fixtureDate <= now) {
+
+        // Define highlight window: start = kickOff - 1 hour, end = kickOff + 2.5 hours
+        const windowStart = new Date(fixtureDate.getTime() - (60 * 60 * 1000));
+        const windowEnd = new Date(fixtureDate.getTime() + (2.5 * 60 * 60 * 1000));
+
+        // If we're past the entire window, remove the item
+        if (now > windowEnd) {
             removeWithSwipe(item);
             return;
         }
 
-        if (fixtureDate.toDateString() === now.toDateString()) item.classList.add('imminent');
-        else item.classList.remove('imminent');
+        // Apply yellow 'imminent' for fixtures occurring today
+        if (fixtureDate.toDateString() === now.toDateString()) {
+            item.classList.add('imminent');
+        } else {
+            item.classList.remove('imminent');
+        }
+
+        // If the match is ongoing, add a red alert class
+        if (now >= windowStart && now <= windowEnd) {
+            item.classList.add('alert');
+        } else {
+            item.classList.remove('alert');
+        }
     });
 
     // Update countdown for next tram

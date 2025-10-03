@@ -152,11 +152,6 @@ def get_football_fixtures() -> tuple[str, list[dict[str, str]]]:
             # Limit the number of fixtures
             if len(fixtures) >= fixture_limit:
                 break
-            # Get the competition from img title if it exists
-            competition = ""
-            img = item.find("img")
-            if img and img.get("title"):
-                competition = str(img.get("title"))
 
             # Find the date and time
             time_elem = item.find("time")
@@ -187,7 +182,6 @@ def get_football_fixtures() -> tuple[str, list[dict[str, str]]]:
 
                     fixtures.append(
                         {
-                            "competition": str(competition),
                             "date": str(date),
                             "time": str(time_str),
                             "home_team": str(home_team),
