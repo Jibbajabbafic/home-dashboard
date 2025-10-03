@@ -171,13 +171,15 @@ function updateCountdowns() {
     tramItems.forEach(item => {
         const text = item.textContent.trim();
         const time = text.split(' ')[0];
-        const tramTimeToday = parseTime(time, false); // don't roll -- used to decide removal
-        if (!tramTimeToday) return;
-        if (tramTimeToday <= now) {
+        // Use rolled time so a tram at e.g. 00:10 after midnight is considered next day
+        const tramTime = parseTime(time, true);
+        if (!tramTime) return;
+        // If the tram time (possibly rolled to tomorrow) is already past, remove it
+        if (tramTime <= now) {
             removeWithSwipe(item);
             return;
         }
-        const minutesUntil = Math.floor((tramTimeToday - now) / 60000);
+        const minutesUntil = Math.floor((tramTime - now) / 60000);
         if (minutesUntil <= 15) item.classList.add('imminent');
         else item.classList.remove('imminent');
     });
