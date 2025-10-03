@@ -17,6 +17,14 @@ docker-run:
 docker-build:
 	./build_and_push.sh
 
+# Full release process: bump version, build and push images
+release:
+	echo "Starting release process..."
+	./bump_tag.sh
+	echo "Building docker images..."
+	./build_and_push.sh
+	echo "Release process complete."
+
 # Show available targets
 help:
 	@echo "Available targets:"
@@ -24,6 +32,7 @@ help:
 	@echo "  clean        - Clean up temporary Python files"
 	@echo "  docker-run   - Run the app using docker compose"
 	@echo "  docker-build - Build and push images (calls './build_and_push.sh')"
+	@echo "  release      - Full release process: bump version, build and push images"
 	@echo "  help         - Show this help message"
 
 # Set run as the default target
